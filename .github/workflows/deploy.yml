@@ -29,14 +29,20 @@ jobs:
           cache-dependency-path: './plant-tracker/package-lock.json'
 
       - name: Install dependencies
-        run: |
-          cd plant-tracker
-          npm ci
+        working-directory: ./plant-tracker
+        run: npm ci
+
+      - name: Run linting
+        working-directory: ./plant-tracker
+        run: npm run lint
+
+      - name: Run tests with coverage
+        working-directory: ./plant-tracker
+        run: npm run test:ci
 
       - name: Build
-        run: |
-          cd plant-tracker
-          npm run build
+        working-directory: ./plant-tracker
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
