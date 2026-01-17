@@ -1,10 +1,10 @@
-# Plant Tracker
+# Square Gardener
 
 A responsive web application to help gardeners manage their plants, watering schedules, and vegetable garden planning using square foot gardening principles.
 
 ## Overview
 
-Plant Tracker is a free, web-based gardening companion that helps you:
+Square Gardener is a free, web-based gardening companion that helps you:
 - Track your plants and their care requirements
 - Manage watering schedules and get reminders
 - Plan your vegetable garden using square foot gardening rules
@@ -38,7 +38,7 @@ This project uses continuous deployment via GitHub Actions. Any push to the `mai
 
 ## Vision
 
-The north star for Plant Tracker is to become a comprehensive gardening assistant that takes the guesswork out of gardening, helping both beginners and experienced gardeners maximize their harvest while minimizing waste and effort.
+The north star for Square Gardener is to become a comprehensive gardening assistant that takes the guesswork out of gardening, helping both beginners and experienced gardeners maximize their harvest while minimizing waste and effort.
 
 ## License
 

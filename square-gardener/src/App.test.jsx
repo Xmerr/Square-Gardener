@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import App from './App';
 
 describe('App', () => {
-  it('renders the Plant Tracker header', () => {
+  it('renders the Square Gardener header', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Plant Tracker');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Square Gardener');
   });
 
   it('renders the tagline', () => {

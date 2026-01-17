@@ -3,7 +3,7 @@ function App() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-gradient-to-br from-primary to-primary-light text-white py-6 px-4 sm:py-8 md:py-10 text-center shadow-md">
         <h1 className="m-0 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">
-          🌱 Plant Tracker
+          🌱 Square Gardener
         </h1>
         <p className="mt-2 text-base sm:text-lg opacity-95">
           Your Square Foot Gardening Companion
@@ -16,7 +16,7 @@ function App() {
             Hello World!
           </h2>
           <p className="text-text-dark text-base sm:text-lg leading-relaxed">
-            Welcome to Plant Tracker - a web app to help you manage your garden.
+            Welcome to Square Gardener - a web app to help you manage your garden.
           </p>
           <div className="mt-6 sm:mt-8 text-left">
             <h3 className="text-primary-light mb-3 sm:mb-4 text-lg sm:text-xl font-medium">

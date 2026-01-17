@@ -11,7 +11,7 @@
 
 ### 1.1 Problem Statement
 
-The Plant Tracker application currently has minimal responsive design (single 768px breakpoint) and no automated testing infrastructure. As the app grows beyond the prototype phase into MVP features (Plant Library, Garden Planner, Watering Schedule), it needs:
+The Square Gardener application currently has minimal responsive design (single 768px breakpoint) and no automated testing infrastructure. As the app grows beyond the prototype phase into MVP features (Plant Library, Garden Planner, Watering Schedule), it needs:
 
 1. **Comprehensive mobile support** across all device sizes to serve gardeners checking their plants on-the-go
 2. **Robust test coverage** to maintain code quality and prevent regressions as features are added
@@ -40,7 +40,7 @@ The Plant Tracker application currently has minimal responsive design (single 76
 
 ### 2.1 Context
 
-Plant Tracker is a React 19 + Vite application for gardeners to manage plants using square foot gardening principles. The app is deployed to GitHub Pages via GitHub Actions.
+Square Gardener is a React 19 + Vite application for gardeners to manage plants using square foot gardening principles. The app is deployed to GitHub Pages via GitHub Actions.
 
 ### 2.2 Current State
 
@@ -129,7 +129,7 @@ xl:  1280px - Desktops
 // Example component
 <div className="p-4 sm:p-6 md:p-8 lg:p-10">
   <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl">
-    Plant Tracker
+    Square Gardener
   </h1>
 </div>
 ```
@@ -435,25 +435,25 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: plant-tracker/package-lock.json
+          cache-dependency-path: square-gardener/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./plant-tracker
+        working-directory: ./square-gardener
         run: npm ci
 
       - name: Run linting
-        working-directory: ./plant-tracker
+        working-directory: ./square-gardener
         run: npm run lint
 
       - name: Run tests with coverage
-        working-directory: ./plant-tracker
+        working-directory: ./square-gardener
         run: npm run test:ci
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: plant-tracker/coverage/
+          path: square-gardener/coverage/
 
   build-and-deploy:
     needs: test  # Only runs if test job passes
