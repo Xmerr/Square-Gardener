@@ -33,13 +33,13 @@ The prototype will display:
 
 ```bash
 # Using Vite (recommended)
-npm create vite@latest plant-tracker -- --template react
-cd plant-tracker
+npm create vite@latest square-gardener -- --template react
+cd square-gardener
 npm install
 
 # OR using Create React App
-npx create-react-app plant-tracker
-cd plant-tracker
+npx create-react-app square-gardener
+cd square-gardener
 ```
 
 ### 2. Configure GitHub Pages
@@ -134,7 +134,7 @@ To complete the deployment to GitHub Pages, you need to:
 3. **Trigger Deployment**:
    - Once merged to main, the GitHub Actions workflow will automatically run
    - Monitor progress in the Actions tab
-   - App will be live at `https://<username>.github.io/Claude-android-test/`
+   - App will be live at `https://<username>.github.io/Square-Gardener/`
 
 4. **Set main as default branch** (optional):
    - Go to repository Settings → Branches
