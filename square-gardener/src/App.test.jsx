@@ -5,25 +5,28 @@ import App from './App';
 describe('App', () => {
   it('renders the Square Gardener header', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Square Gardener');
+    const headers = screen.getAllByText(/Square Gardener/);
+    expect(headers.length).toBeGreaterThan(0);
   });
 
   it('renders the tagline', () => {
     render(<App />);
-    expect(screen.getByText('Your Square Foot Gardening Companion')).toBeInTheDocument();
+    expect(screen.getAllByText('Your Square Foot Gardening Companion').length).toBeGreaterThan(0);
   });
 
-  it('renders the welcome card with Hello World', () => {
+  it('renders the navigation menu', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Hello World!');
+    expect(screen.getByText(/🏠 Home/)).toBeInTheDocument();
+    expect(screen.getByText(/🌿 My Garden/)).toBeInTheDocument();
+    expect(screen.getByText(/💧 Watering/)).toBeInTheDocument();
+    expect(screen.getByText(/📐 Planner/)).toBeInTheDocument();
+    expect(screen.getByText(/📅 Calendar/)).toBeInTheDocument();
   });
 
-  it('renders all coming soon features', () => {
+  it('renders the home page by default', () => {
     render(<App />);
-    expect(screen.getByText(/Track your plants/)).toBeInTheDocument();
-    expect(screen.getByText(/Plan your garden/)).toBeInTheDocument();
-    expect(screen.getByText(/optimal planting times/)).toBeInTheDocument();
-    expect(screen.getByText(/companion planting/)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to Square Gardener/)).toBeInTheDocument();
+    expect(screen.getByText(/Get Started with Square Gardening/)).toBeInTheDocument();
   });
 
   it('renders the footer', () => {
