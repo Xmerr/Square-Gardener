@@ -58,11 +58,22 @@ Tests should be co-located with their source files:
 
 ### CI/CD Integration
 
-The GitHub Actions workflow will:
-1. Run linting (`npm run lint`)
-2. Run tests with coverage (`npm run test:ci`)
-3. **Fail the build if coverage drops below 100%**
-4. Deploy only if all checks pass
+The project has two GitHub Actions workflows:
+
+**PR Quality Checks** (`.github/workflows/pr-checks.yml`):
+- Runs on all pull requests to main
+- Executes linting (`npm run lint`)
+- Runs tests with coverage (`npm run test:ci`)
+- **Blocks PR merging if tests fail or coverage drops below 100%**
+- Uploads coverage reports as artifacts
+
+**Deployment** (`.github/workflows/deploy.yml`):
+- Runs on pushes to main branch
+- Executes the same quality checks
+- Builds and deploys to GitHub Pages
+- Only deploys if all checks pass
+
+Branch protection is enabled on the main branch, requiring the `test-and-coverage` check to pass before PRs can be merged.
 
 ### Coverage Configuration
 
