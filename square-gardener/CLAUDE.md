@@ -58,11 +58,39 @@ Tests should be co-located with their source files:
 
 ### CI/CD Integration
 
-The GitHub Actions workflow will:
-1. Run linting (`npm run lint`)
-2. Run tests with coverage (`npm run test:ci`)
-3. **Fail the build if coverage drops below 100%**
-4. Deploy only if all checks pass
+The project has two GitHub Actions workflows:
+
+**PR Quality Checks** (`.github/workflows/pr-checks.yml`):
+- Runs on all pull requests to main
+- Executes linting (`npm run lint`)
+- Runs tests with coverage (`npm run test:ci`)
+- **Blocks PR merging if tests fail or coverage drops below 100%**
+- Uploads coverage reports as artifacts
+
+**Deployment** (`.github/workflows/deploy.yml`):
+- Runs on pushes to main branch
+- Executes the same quality checks
+- Builds and deploys to GitHub Pages
+- Only deploys if all checks pass
+
+### Branch Protection Rules
+
+To enforce test coverage on PRs, configure the following branch protection rules in GitHub:
+
+1. Go to **Settings** → **Branches** → **Branch protection rules**
+2. Add rule for `main` branch:
+   - ✅ **Require a pull request before merging**
+     - Require approvals: 1 (optional)
+   - ✅ **Require status checks to pass before merging**
+     - Add required check: `test-and-coverage`
+   - ✅ **Require branches to be up to date before merging**
+   - ✅ **Do not allow bypassing the above settings**
+
+With these rules:
+- All changes must go through a pull request
+- The `test-and-coverage` job must pass (including 100% coverage)
+- PRs cannot be merged if tests fail or coverage drops
+- Direct pushes to main are blocked
 
 ### Coverage Configuration
 
