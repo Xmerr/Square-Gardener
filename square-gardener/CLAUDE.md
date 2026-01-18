@@ -73,24 +73,7 @@ The project has two GitHub Actions workflows:
 - Builds and deploys to GitHub Pages
 - Only deploys if all checks pass
 
-### Branch Protection Rules
-
-To enforce test coverage on PRs, configure the following branch protection rules in GitHub:
-
-1. Go to **Settings** → **Branches** → **Branch protection rules**
-2. Add rule for `main` branch:
-   - ✅ **Require a pull request before merging**
-     - Require approvals: 1 (optional)
-   - ✅ **Require status checks to pass before merging**
-     - Add required check: `test-and-coverage`
-   - ✅ **Require branches to be up to date before merging**
-   - ✅ **Do not allow bypassing the above settings**
-
-With these rules:
-- All changes must go through a pull request
-- The `test-and-coverage` job must pass (including 100% coverage)
-- PRs cannot be merged if tests fail or coverage drops
-- Direct pushes to main are blocked
+Branch protection is enabled on the main branch, requiring the `test-and-coverage` check to pass before PRs can be merged.
 
 ### Coverage Configuration
 
