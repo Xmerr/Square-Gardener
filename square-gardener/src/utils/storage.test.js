@@ -17,15 +17,23 @@ import {
   getBedCapacity,
   reassignPlant,
   bulkReassignPlants,
-  clearAllData
+  clearAllData,
+  getGardenDefaults,
+  saveGardenDefaults,
+  getPlantDefaults,
+  setPlantDefaults,
+  updatePlantDefaults,
+  deletePlantDefaults,
+  resolveEffectiveValue,
+  resolveAllEffectiveValues
 } from './storage';
 
 vi.mock('../data/plantLibrary', () => ({
   getPlantById: vi.fn((id) => {
     const plants = {
-      'tomato': { id: 'tomato', squaresPerPlant: 1 },
-      'lettuce': { id: 'lettuce', squaresPerPlant: 0.25 },
-      'carrot': { id: 'carrot', squaresPerPlant: 0.0625 }
+      'tomato': { id: 'tomato', squaresPerPlant: 1, daysToMaturity: 70 },
+      'lettuce': { id: 'lettuce', squaresPerPlant: 0.25, daysToMaturity: 45 },
+      'carrot': { id: 'carrot', squaresPerPlant: 0.0625, daysToMaturity: 70 }
     };
     return plants[id] || null;
   })
@@ -125,6 +133,32 @@ describe('storage utilities', () => {
       const plants = getGardenPlants();
       expect(plants[0].variety).toBe('Brandywine');
     });
+
+    it('adds a new plant with null harvestDateOverride by default', () => {
+      const result = addGardenPlant('tomato', 'bed-1');
+      expect(result.harvestDateOverride).toBeNull();
+    });
+
+    it('adds a new plant with custom harvestDateOverride', () => {
+      const overrideDate = '2026-04-15T00:00:00.000Z';
+      const result = addGardenPlant('tomato', 'bed-1', 1, new Date().toISOString(), null, overrideDate);
+      expect(result.harvestDateOverride).toBe(overrideDate);
+    });
+
+    it('persists harvestDateOverride field in storage', () => {
+      const overrideDate = '2026-05-01T00:00:00.000Z';
+      addGardenPlant('tomato', 'bed-1', 1, new Date().toISOString(), 'Cherokee Purple', overrideDate);
+      const plants = getGardenPlants();
+      expect(plants[0].harvestDateOverride).toBe(overrideDate);
+    });
+
+    it('allows setting harvestDateOverride with variety', () => {
+      const overrideDate = '2026-06-15T00:00:00.000Z';
+      const result = addGardenPlant('tomato', 'bed-1', 2, '2026-03-01T00:00:00.000Z', 'Roma', overrideDate);
+      expect(result.variety).toBe('Roma');
+      expect(result.harvestDateOverride).toBe(overrideDate);
+      expect(result.quantity).toBe(2);
+    });
   });
 
   describe('removeGardenPlant', () => {
@@ -196,7 +230,7 @@ describe('storage utilities', () => {
     });
 
     it('returns stored beds', () => {
-      const beds = [{ id: 'bed-1', name: 'Main Bed' }];
+      const beds = [{ id: 'bed-1', name: 'Main Bed', is_pot: false }];
       sessionStorage.setItem('square-gardener-beds', JSON.stringify(beds));
       expect(getGardenBeds()).toEqual(beds);
     });
@@ -233,11 +267,13 @@ describe('storage utilities', () => {
     it('clears all stored data', () => {
       addGardenPlant('tomato', 'bed-1');
       saveGardenBeds([{ id: 'bed-1' }]);
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
 
       clearAllData();
 
       expect(getGardenPlants()).toEqual([]);
       expect(getGardenBeds()).toEqual([]);
+      expect(getGardenDefaults()).toEqual({});
     });
   });
 
@@ -529,6 +565,289 @@ describe('storage utilities', () => {
 
       const result = bulkReassignPlants([plant.id], 'non-existent-bed');
       expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================
+  // Garden Defaults Tests
+  // ============================================================
+
+  describe('getGardenDefaults', () => {
+    it('returns empty object when no defaults stored', () => {
+      expect(getGardenDefaults()).toEqual({});
+    });
+
+    it('returns stored defaults', () => {
+      const defaults = {
+        tomato: { daysToMaturity: 80, squaresPerPlant: 2 }
+      };
+      sessionStorage.setItem('square-gardener-garden-defaults', JSON.stringify(defaults));
+      expect(getGardenDefaults()).toEqual(defaults);
+    });
+
+    it('returns empty object on JSON parse error', () => {
+      sessionStorage.setItem('square-gardener-garden-defaults', 'invalid-json');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(getGardenDefaults()).toEqual({});
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('saveGardenDefaults', () => {
+    it('saves defaults to storage', () => {
+      const defaults = {
+        tomato: { daysToMaturity: 80, squaresPerPlant: null }
+      };
+      const result = saveGardenDefaults(defaults);
+      expect(result).toBe(true);
+      expect(JSON.parse(sessionStorage.getItem('square-gardener-garden-defaults'))).toEqual(defaults);
+    });
+
+    it('returns false on storage error', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const circularObj = {};
+      circularObj.self = circularObj;
+
+      const result = saveGardenDefaults(circularObj);
+      expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getPlantDefaults', () => {
+    it('returns null for non-existent plant defaults', () => {
+      expect(getPlantDefaults('tomato')).toBeNull();
+    });
+
+    it('returns defaults for a specific plant', () => {
+      const defaults = {
+        tomato: { daysToMaturity: 80, squaresPerPlant: 2 },
+        lettuce: { daysToMaturity: 30, squaresPerPlant: 0.5 }
+      };
+      saveGardenDefaults(defaults);
+
+      expect(getPlantDefaults('tomato')).toEqual({ daysToMaturity: 80, squaresPerPlant: 2 });
+      expect(getPlantDefaults('lettuce')).toEqual({ daysToMaturity: 30, squaresPerPlant: 0.5 });
+    });
+
+    it('returns null for plant not in defaults', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      expect(getPlantDefaults('carrot')).toBeNull();
+    });
+  });
+
+  describe('setPlantDefaults', () => {
+    it('creates new defaults for a plant', () => {
+      const result = setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+
+      expect(result).toEqual({ daysToMaturity: 80, squaresPerPlant: 2 });
+      expect(getPlantDefaults('tomato')).toEqual({ daysToMaturity: 80, squaresPerPlant: 2 });
+    });
+
+    it('replaces existing defaults completely', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = setPlantDefaults('tomato', { daysToMaturity: 90 });
+
+      expect(result).toEqual({ daysToMaturity: 90, squaresPerPlant: null });
+    });
+
+    it('sets null for missing properties', () => {
+      const result = setPlantDefaults('tomato', {});
+      expect(result).toEqual({ daysToMaturity: null, squaresPerPlant: null });
+    });
+
+    it('handles undefined values as null', () => {
+      const result = setPlantDefaults('tomato', { daysToMaturity: undefined, squaresPerPlant: undefined });
+      expect(result).toEqual({ daysToMaturity: null, squaresPerPlant: null });
+    });
+
+    it('preserves other plant defaults', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      setPlantDefaults('lettuce', { daysToMaturity: 30 });
+
+      expect(getPlantDefaults('tomato')).toEqual({ daysToMaturity: 80, squaresPerPlant: null });
+      expect(getPlantDefaults('lettuce')).toEqual({ daysToMaturity: 30, squaresPerPlant: null });
+    });
+  });
+
+  describe('updatePlantDefaults', () => {
+    it('updates existing defaults', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = updatePlantDefaults('tomato', { daysToMaturity: 90 });
+
+      expect(result).toEqual({ daysToMaturity: 90, squaresPerPlant: 2 });
+    });
+
+    it('creates defaults if they do not exist', () => {
+      const result = updatePlantDefaults('tomato', { daysToMaturity: 80 });
+
+      expect(result).toEqual({ daysToMaturity: 80, squaresPerPlant: null });
+    });
+
+    it('merges updates with existing values', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = updatePlantDefaults('tomato', { squaresPerPlant: 1.5 });
+
+      expect(result).toEqual({ daysToMaturity: 80, squaresPerPlant: 1.5 });
+    });
+
+    it('allows setting values to null', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = updatePlantDefaults('tomato', { daysToMaturity: null });
+
+      expect(result).toEqual({ daysToMaturity: null, squaresPerPlant: 2 });
+    });
+  });
+
+  describe('deletePlantDefaults', () => {
+    it('deletes existing plant defaults', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = deletePlantDefaults('tomato');
+
+      expect(result).toBe(true);
+      expect(getPlantDefaults('tomato')).toBeNull();
+    });
+
+    it('returns false when plant has no defaults', () => {
+      const result = deletePlantDefaults('tomato');
+      expect(result).toBe(false);
+    });
+
+    it('preserves other plant defaults when deleting', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      setPlantDefaults('lettuce', { daysToMaturity: 30 });
+
+      deletePlantDefaults('tomato');
+
+      expect(getPlantDefaults('tomato')).toBeNull();
+      expect(getPlantDefaults('lettuce')).toEqual({ daysToMaturity: 30, squaresPerPlant: null });
+    });
+  });
+
+  describe('resolveEffectiveValue', () => {
+    it('returns instance override when provided', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', 100);
+      expect(result).toBe(100);
+    });
+
+    it('returns garden default when no instance override', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', null);
+      expect(result).toBe(80);
+    });
+
+    it('returns garden default when instance override is undefined', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', undefined);
+      expect(result).toBe(80);
+    });
+
+    it('returns library default when no garden default', () => {
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', null);
+      expect(result).toBe(70); // Library default from mock
+    });
+
+    it('returns null for non-existent plant in library', () => {
+      const result = resolveEffectiveValue('unknown-plant', 'daysToMaturity', null);
+      expect(result).toBeNull();
+    });
+
+    it('returns null when property not found anywhere', () => {
+      const result = resolveEffectiveValue('tomato', 'nonExistentProperty', null);
+      expect(result).toBeNull();
+    });
+
+    it('resolves squaresPerPlant property', () => {
+      setPlantDefaults('tomato', { squaresPerPlant: 2 });
+      expect(resolveEffectiveValue('tomato', 'squaresPerPlant', null)).toBe(2);
+      expect(resolveEffectiveValue('tomato', 'squaresPerPlant', 3)).toBe(3);
+    });
+
+    it('returns library squaresPerPlant when no override or default', () => {
+      const result = resolveEffectiveValue('tomato', 'squaresPerPlant', null);
+      expect(result).toBe(1); // Library default from mock
+    });
+
+    it('handles zero as a valid instance override', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', 0);
+      expect(result).toBe(0);
+    });
+
+    it('handles zero as a valid garden default', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 0 });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', null);
+      expect(result).toBe(0);
+    });
+
+    it('skips garden default when property is null', () => {
+      setPlantDefaults('tomato', { daysToMaturity: null });
+      const result = resolveEffectiveValue('tomato', 'daysToMaturity', null);
+      expect(result).toBe(70); // Falls through to library default
+    });
+  });
+
+  describe('resolveAllEffectiveValues', () => {
+    it('resolves all values with no overrides or defaults', () => {
+      const result = resolveAllEffectiveValues('tomato');
+      expect(result).toEqual({
+        daysToMaturity: 70,
+        squaresPerPlant: 1
+      });
+    });
+
+    it('resolves all values with garden defaults', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = resolveAllEffectiveValues('tomato');
+      expect(result).toEqual({
+        daysToMaturity: 80,
+        squaresPerPlant: 2
+      });
+    });
+
+    it('resolves all values with instance overrides', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = resolveAllEffectiveValues('tomato', { daysToMaturity: 100, squaresPerPlant: 0.5 });
+      expect(result).toEqual({
+        daysToMaturity: 100,
+        squaresPerPlant: 0.5
+      });
+    });
+
+    it('resolves mixed values (instance + garden + library)', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: null });
+      const result = resolveAllEffectiveValues('tomato', { daysToMaturity: null });
+      expect(result).toEqual({
+        daysToMaturity: 80,
+        squaresPerPlant: 1 // Falls through to library default
+      });
+    });
+
+    it('handles empty instance overrides object', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80 });
+      const result = resolveAllEffectiveValues('tomato', {});
+      expect(result).toEqual({
+        daysToMaturity: 80,
+        squaresPerPlant: 1
+      });
+    });
+
+    it('handles non-existent plant', () => {
+      const result = resolveAllEffectiveValues('unknown-plant');
+      expect(result).toEqual({
+        daysToMaturity: null,
+        squaresPerPlant: null
+      });
+    });
+
+    it('handles partial instance overrides', () => {
+      setPlantDefaults('tomato', { daysToMaturity: 80, squaresPerPlant: 2 });
+      const result = resolveAllEffectiveValues('tomato', { daysToMaturity: 100 });
+      expect(result).toEqual({
+        daysToMaturity: 100,
+        squaresPerPlant: 2
+      });
     });
   });
 });
