@@ -144,3 +144,39 @@ square-gardener/
 │   └── workflows/      # CI/CD configuration
 └── package.json
 ```
+
+## Feature Specifications
+
+Feature specifications are located in `docs/specs/`. Each spec documents requirements, design, and implementation details for a planned feature.
+
+### Spec Status Tracking
+
+**IMPORTANT**: The file `docs/specs/SPEC-STATUS.md` tracks implementation status of all specifications.
+
+When working on features:
+
+1. **Before starting work**: Check SPEC-STATUS.md to understand current state
+2. **During implementation**: Update status from `:x: Not Started` to `:construction: In Progress`
+3. **After completing a component**: Check off the corresponding item in the spec's checklist
+4. **When spec is fully implemented**: Update status to `:white_check_mark: Complete`
+5. **Add changelog entry**: Record the date and what changed
+
+### Status Values
+
+| Status | When to Use |
+|--------|-------------|
+| `:white_check_mark: Complete` | All requirements implemented and tested |
+| `:construction: In Progress` | Actively being worked on |
+| `:hourglass: Partial` | Some components done, others pending |
+| `:x: Not Started` | No implementation exists |
+| `:clipboard: Placeholder` | Only stubs/routes exist |
+
+### Spec Files
+
+| Spec | Description |
+|------|-------------|
+| `mobile-responsiveness-and-testing-spec.md` | Tailwind CSS, Vitest, CI/CD |
+| `bed-management-feature-spec.md` | Garden beds, capacity tracking |
+| `enhanced-plant-properties-spec.md` | Variety, harvest dates, overrides |
+| `indoor-plants-and-pots-spec.md` | Pot support, houseplants |
+| `planning-mode-spec.md` | Auto-arrange, companion planting |
