@@ -2,6 +2,8 @@
 
 A responsive web application to help gardeners manage their plants, watering schedules, and vegetable garden planning using square foot gardening principles.
 
+**[Live Preview](https://xmerr.github.io/Square-Gardener/)**
+
 ## Overview
 
 Square Gardener is a free, web-based gardening companion that helps you:
