@@ -33,17 +33,12 @@ const mockLettuce = {
   avoidPlants: ['parsley']
 };
 
-const mockGarlic = {
-  id: 'garlic',
-  name: 'Garlic',
-  scientificName: 'Allium sativum',
-  wateringFrequency: 4,
-  squaresPerPlant: 0.11,
-  daysToMaturity: 240,
-  plantingSeason: ['fall'],
-  sunRequirement: 'full',
-  companionPlants: ['tomato'],
-  avoidPlants: ['bean']
+const mockBed = {
+  id: 'bed-1',
+  name: 'Main Garden',
+  width: 4,
+  height: 4,
+  order: 0
 };
 
 const renderMyGarden = () => {
@@ -58,20 +53,29 @@ describe('MyGarden', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     storage.getGardenPlants.mockReturnValue([]);
-    storage.addGardenPlant.mockImplementation((plantId) => ({
+    storage.getGardenBeds.mockReturnValue([]);
+    storage.getBedCapacity.mockReturnValue({ total: 16, used: 0, available: 16, isOvercapacity: false });
+    storage.addGardenPlant.mockImplementation((plantId, bedId, quantity) => ({
       id: `garden-${Date.now()}`,
       plantId,
+      bedId,
+      quantity,
       plantedDate: new Date().toISOString(),
       lastWatered: new Date().toISOString(),
       notes: ''
     }));
+    storage.addGardenBed.mockImplementation((name, width, height) => ({
+      id: `bed-${Date.now()}`,
+      name,
+      width,
+      height,
+      order: 0
+    }));
     storage.removeGardenPlant.mockImplementation(() => []);
 
-    // Spy on the real plantLibrary module
     vi.spyOn(plantLibraryModule, 'getPlantById').mockImplementation((id) => {
       if (id === 'tomato') return mockTomato;
       if (id === 'lettuce') return mockLettuce;
-      if (id === 'garlic') return mockGarlic;
       return undefined;
     });
   });
@@ -86,6 +90,12 @@ describe('MyGarden', () => {
       renderMyGarden();
       expect(screen.getByText('Track your plants and their progress')).toBeInTheDocument();
     });
+
+    it('shows tab navigation', () => {
+      renderMyGarden();
+      expect(screen.getByText('Plants')).toBeInTheDocument();
+      expect(screen.getByText('Manage Beds')).toBeInTheDocument();
+    });
   });
 
   describe('empty garden state', () => {
@@ -94,23 +104,85 @@ describe('MyGarden', () => {
       expect(screen.getByText('Your garden is empty')).toBeInTheDocument();
     });
 
-    it('shows browse plant library button', () => {
+    it('shows create first bed message when no beds exist', () => {
+      renderMyGarden();
+      expect(screen.getByText('Create a garden bed first, then add plants!')).toBeInTheDocument();
+    });
+
+    it('shows create first bed button when no beds exist', () => {
+      renderMyGarden();
+      expect(screen.getByText('Create Your First Bed')).toBeInTheDocument();
+    });
+
+    it('shows browse library message when beds exist', () => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+      renderMyGarden();
+      expect(screen.getByText('Add your first plant to start tracking your garden!')).toBeInTheDocument();
+    });
+
+    it('shows browse plant library button when beds exist', () => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
       renderMyGarden();
       expect(screen.getByText('Browse Plant Library')).toBeInTheDocument();
     });
+  });
 
-    it('shows add plant prompt', () => {
+  describe('bed creation flow', () => {
+    it('opens bed form when create first bed clicked', () => {
       renderMyGarden();
-      expect(screen.getByText('Add your first plant to start tracking your garden!')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Create Your First Bed'));
+      expect(screen.getByText('Create New Bed')).toBeInTheDocument();
+    });
+
+    it('creates bed and closes form', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Create Your First Bed'));
+
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test Bed' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(storage.addGardenBed).toHaveBeenCalledWith('Test Bed', 4, 4);
+    });
+
+    it('closes bed form when cancelled', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Create Your First Bed'));
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(screen.queryByText('Create New Bed')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('tab navigation', () => {
+    it('shows plants tab by default', () => {
+      renderMyGarden();
+      expect(screen.getByText('Your garden is empty')).toBeInTheDocument();
+    });
+
+    it('switches to beds tab when clicked', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Manage Beds'));
+      expect(screen.getByText('Garden Beds')).toBeInTheDocument();
+    });
+
+    it('switches back to plants tab', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Manage Beds'));
+      fireEvent.click(screen.getByText('Plants'));
+      expect(screen.getByText('Your garden is empty')).toBeInTheDocument();
     });
   });
 
   describe('with garden plants', () => {
     beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
       storage.getGardenPlants.mockReturnValue([
         {
           id: 'garden-1',
           plantId: 'tomato',
+          bedId: 'bed-1',
+          quantity: 1,
           plantedDate: new Date().toISOString(),
           lastWatered: new Date().toISOString(),
           notes: ''
@@ -118,6 +190,8 @@ describe('MyGarden', () => {
         {
           id: 'garden-2',
           plantId: 'lettuce',
+          bedId: 'bed-1',
+          quantity: 4,
           plantedDate: new Date().toISOString(),
           lastWatered: new Date().toISOString(),
           notes: ''
@@ -135,6 +209,8 @@ describe('MyGarden', () => {
         {
           id: 'garden-1',
           plantId: 'tomato',
+          bedId: 'bed-1',
+          quantity: 1,
           plantedDate: new Date().toISOString(),
           lastWatered: new Date().toISOString(),
           notes: ''
@@ -142,6 +218,22 @@ describe('MyGarden', () => {
       ]);
       renderMyGarden();
       expect(screen.getByText('1 plant in your garden')).toBeInTheDocument();
+    });
+
+    it('groups plants by bed', () => {
+      renderMyGarden();
+      expect(screen.getByText('Main Garden')).toBeInTheDocument();
+    });
+
+    it('shows bed capacity', () => {
+      renderMyGarden();
+      expect(screen.getByText('0/16 sq ft')).toBeInTheDocument();
+    });
+
+    it('shows overcrowded indicator when overcapacity', () => {
+      storage.getBedCapacity.mockReturnValue({ total: 16, used: 20, available: -4, isOvercapacity: true });
+      renderMyGarden();
+      expect(screen.getByText('Overcrowded')).toBeInTheDocument();
     });
 
     it('shows add plant button', () => {
@@ -161,7 +253,47 @@ describe('MyGarden', () => {
     });
   });
 
+  describe('legacy plants without beds', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+      storage.getGardenPlants.mockReturnValue([
+        {
+          id: 'garden-1',
+          plantId: 'tomato',
+          plantedDate: new Date().toISOString(),
+          lastWatered: new Date().toISOString(),
+          notes: ''
+        }
+      ]);
+    });
+
+    it('shows unassigned plants section', () => {
+      renderMyGarden();
+      expect(screen.getByText('Unassigned Plants')).toBeInTheDocument();
+    });
+
+    it('handles unknown plant in unassigned plants gracefully', () => {
+      storage.getGardenPlants.mockReturnValue([
+        {
+          id: 'garden-1',
+          plantId: 'unknown-plant',
+          plantedDate: new Date().toISOString(),
+          lastWatered: new Date().toISOString(),
+          notes: ''
+        }
+      ]);
+      plantLibraryModule.getPlantById.mockReturnValue(undefined);
+
+      renderMyGarden();
+      expect(screen.getByText('Unassigned Plants')).toBeInTheDocument();
+    });
+  });
+
   describe('plant library modal', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+    });
+
     it('opens when browse button clicked', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
@@ -189,6 +321,10 @@ describe('MyGarden', () => {
   });
 
   describe('search and filter', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+    });
+
     it('filters plants by search term', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
@@ -196,7 +332,6 @@ describe('MyGarden', () => {
       const searchInput = screen.getByPlaceholderText('Search plants...');
       fireEvent.change(searchInput, { target: { value: 'tomato' } });
 
-      // Should show tomato
       expect(screen.getByText('Tomato')).toBeInTheDocument();
     });
 
@@ -207,7 +342,6 @@ describe('MyGarden', () => {
       const searchInput = screen.getByPlaceholderText('Search plants...');
       fireEvent.change(searchInput, { target: { value: 'Solanum' } });
 
-      // Should show tomato (Solanum lycopersicum)
       expect(screen.getByText('Tomato')).toBeInTheDocument();
     });
 
@@ -218,7 +352,6 @@ describe('MyGarden', () => {
       const seasonSelect = screen.getByRole('combobox');
       fireEvent.change(seasonSelect, { target: { value: 'summer' } });
 
-      // Only summer plants should remain visible
       expect(screen.getByText('Tomato')).toBeInTheDocument();
     });
 
@@ -233,37 +366,50 @@ describe('MyGarden', () => {
     });
   });
 
-  describe('adding plants', () => {
-    it('adds plant when add button clicked', async () => {
-      storage.getGardenPlants
-        .mockReturnValueOnce([]) // Initial load
-        .mockReturnValueOnce([
-          {
-            id: 'garden-new',
-            plantId: 'tomato',
-            plantedDate: new Date().toISOString(),
-            lastWatered: new Date().toISOString(),
-            notes: ''
-          }
-        ]); // After add
+  describe('adding plants flow', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+    });
 
+    it('shows bed selection after selecting plant', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
-      // Find and click the first Add to Garden button
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
-      expect(storage.addGardenPlant).toHaveBeenCalled();
+      expect(screen.getByText('Select Bed & Quantity')).toBeInTheDocument();
     });
 
-    it('closes modal after adding plant', async () => {
+    it('shows quantity input', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+
+      expect(screen.getByText('Quantity')).toBeInTheDocument();
+    });
+
+    it('auto-selects bed when only one exists', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+
+      expect(screen.getByText('Add to Garden')).toBeEnabled();
+    });
+
+    it('adds plant with bed and quantity', async () => {
       storage.getGardenPlants
         .mockReturnValueOnce([])
         .mockReturnValueOnce([
           {
             id: 'garden-new',
             plantId: 'tomato',
+            bedId: 'bed-1',
+            quantity: 2,
             plantedDate: new Date().toISOString(),
             lastWatered: new Date().toISOString(),
             notes: ''
@@ -276,18 +422,89 @@ describe('MyGarden', () => {
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
+      const quantityInput = screen.getByRole('spinbutton');
+      fireEvent.change(quantityInput, { target: { value: '2' } });
+
+      fireEvent.click(screen.getByText('Add to Garden'));
+
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 2);
+    });
+
+    it('can go back from bed selection', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+
+      fireEvent.click(screen.getByText('Back'));
+
+      expect(screen.getByText('Choose plants to add to your garden')).toBeInTheDocument();
+    });
+
+    it('closes modal after adding plant', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce([
+          {
+            id: 'garden-new',
+            plantId: 'tomato',
+            bedId: 'bed-1',
+            quantity: 1,
+            plantedDate: new Date().toISOString(),
+            lastWatered: new Date().toISOString(),
+            notes: ''
+          }
+        ]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+      fireEvent.click(screen.getByText('Add to Garden'));
+
       await waitFor(() => {
-        expect(screen.queryByText('Choose plants to add to your garden')).not.toBeInTheDocument();
+        expect(screen.queryByText('Select Bed & Quantity')).not.toBeInTheDocument();
       });
+    });
+
+    it('does not add plant without bed selection', () => {
+      storage.getGardenBeds.mockReturnValue([mockBed, { ...mockBed, id: 'bed-2', name: 'Second Bed' }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+
+      const addToGardenButton = screen.getByText('Add to Garden');
+      expect(addToGardenButton).toBeDisabled();
+    });
+
+    it('handles invalid quantity input', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      const addButtons = screen.getAllByText('+ Add to Garden');
+      fireEvent.click(addButtons[0]);
+
+      const quantityInput = screen.getByRole('spinbutton');
+      fireEvent.change(quantityInput, { target: { value: 'abc' } });
+
+      expect(quantityInput).toHaveValue(1);
     });
   });
 
   describe('removing plants', () => {
     beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
       storage.getGardenPlants.mockReturnValue([
         {
           id: 'garden-1',
           plantId: 'tomato',
+          bedId: 'bed-1',
+          quantity: 1,
           plantedDate: new Date().toISOString(),
           lastWatered: new Date().toISOString(),
           notes: ''
@@ -296,7 +513,6 @@ describe('MyGarden', () => {
     });
 
     it('calls removeGardenPlant when confirmed', () => {
-      // Mock window.confirm
       vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       renderMyGarden();
@@ -317,10 +533,13 @@ describe('MyGarden', () => {
 
   describe('unknown plants', () => {
     it('handles unknown plant ids gracefully', () => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
       storage.getGardenPlants.mockReturnValue([
         {
           id: 'garden-1',
           plantId: 'unknown-plant',
+          bedId: 'bed-1',
+          quantity: 1,
           plantedDate: new Date().toISOString(),
           lastWatered: new Date().toISOString(),
           notes: ''
@@ -329,8 +548,51 @@ describe('MyGarden', () => {
       plantLibraryModule.getPlantById.mockReturnValue(undefined);
 
       renderMyGarden();
-      // Should not crash, and unknown plant should not be rendered
       expect(screen.getByText('1 plant in your garden')).toBeInTheDocument();
+    });
+  });
+
+  describe('beds with no plants', () => {
+    it('does not render empty bed sections', () => {
+      storage.getGardenBeds.mockReturnValue([mockBed, { ...mockBed, id: 'bed-2', name: 'Empty Bed' }]);
+      storage.getGardenPlants.mockReturnValue([
+        {
+          id: 'garden-1',
+          plantId: 'tomato',
+          bedId: 'bed-1',
+          quantity: 1,
+          plantedDate: new Date().toISOString(),
+          lastWatered: new Date().toISOString(),
+          notes: ''
+        }
+      ]);
+
+      renderMyGarden();
+      expect(screen.getByText('Main Garden')).toBeInTheDocument();
+      expect(screen.queryByText('Empty Bed')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('bed capacity display', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+      storage.getGardenPlants.mockReturnValue([
+        {
+          id: 'garden-1',
+          plantId: 'tomato',
+          bedId: 'bed-1',
+          quantity: 1,
+          plantedDate: new Date().toISOString(),
+          lastWatered: new Date().toISOString(),
+          notes: ''
+        }
+      ]);
+    });
+
+    it('handles missing capacity gracefully', () => {
+      storage.getBedCapacity.mockReturnValue(null);
+      renderMyGarden();
+      expect(screen.getByText('Main Garden')).toBeInTheDocument();
     });
   });
 });
