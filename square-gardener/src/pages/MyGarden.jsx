@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import PlantCard from '../components/PlantCard';
 import BedManager from '../components/BedManager';
 import BedSelector from '../components/BedSelector';
@@ -14,9 +14,8 @@ import {
 } from '../utils/storage';
 
 function MyGarden() {
-  const [gardenPlants, setGardenPlants] = useState([]);
-  const [beds, setBeds] = useState([]);
-  const [capacities, setCapacities] = useState({});
+  const [gardenPlants, setGardenPlants] = useState(() => getGardenPlants());
+  const [beds, setBeds] = useState(() => getGardenBeds());
   const [activeTab, setActiveTab] = useState('plants');
   const [showLibrary, setShowLibrary] = useState(false);
   const [showBedForm, setShowBedForm] = useState(false);
@@ -26,22 +25,18 @@ function MyGarden() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeason, setFilterSeason] = useState('all');
 
-  const loadData = () => {
-    const plants = getGardenPlants();
-    const loadedBeds = getGardenBeds();
-    setGardenPlants(plants);
-    setBeds(loadedBeds);
-
+  const capacities = useMemo(() => {
     const caps = {};
-    loadedBeds.forEach((bed) => {
+    beds.forEach((bed) => {
       caps[bed.id] = getBedCapacity(bed.id);
     });
-    setCapacities(caps);
-  };
+    return caps;
+  }, [beds]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const loadData = () => {
+    setGardenPlants(getGardenPlants());
+    setBeds(getGardenBeds());
+  };
 
   const handleAddPlant = () => {
     addGardenPlant(selectedPlantId, selectedBedId, plantQuantity);

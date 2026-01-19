@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import BedCard from './BedCard';
 import BedForm from './BedForm';
@@ -12,30 +12,30 @@ import {
 } from '../utils/storage';
 
 function BedManager({ onBedChange }) {
-  const [beds, setBeds] = useState([]);
+  const [beds, setBeds] = useState(() => getGardenBeds());
   const [showForm, setShowForm] = useState(false);
   const [editingBed, setEditingBed] = useState(null);
-  const [capacities, setCapacities] = useState({});
-  const [plantCounts, setPlantCounts] = useState({});
   const [deleteError, setDeleteError] = useState(null);
 
-  const loadBeds = () => {
-    const loadedBeds = getGardenBeds();
-    setBeds(loadedBeds);
-
+  const capacities = useMemo(() => {
     const caps = {};
-    const counts = {};
-    loadedBeds.forEach((bed) => {
+    beds.forEach((bed) => {
       caps[bed.id] = getBedCapacity(bed.id);
+    });
+    return caps;
+  }, [beds]);
+
+  const plantCounts = useMemo(() => {
+    const counts = {};
+    beds.forEach((bed) => {
       counts[bed.id] = getPlantsByBed(bed.id).length;
     });
-    setCapacities(caps);
-    setPlantCounts(counts);
-  };
+    return counts;
+  }, [beds]);
 
-  useEffect(() => {
-    loadBeds();
-  }, []);
+  const loadBeds = () => {
+    setBeds(getGardenBeds());
+  };
 
   const handleCreateBed = (data) => {
     addGardenBed(data.name, data.width, data.height);
@@ -106,6 +106,7 @@ function BedManager({ onBedChange }) {
       {(showForm || editingBed) && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <BedForm
+            key={editingBed?.id || 'new'}
             bed={editingBed}
             onSubmit={editingBed ? handleUpdateBed : handleCreateBed}
             onCancel={handleCancelForm}

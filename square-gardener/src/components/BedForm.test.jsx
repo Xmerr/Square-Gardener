@@ -223,15 +223,17 @@ describe('BedForm', () => {
   });
 
   describe('edit mode', () => {
-    it('updates form when bed prop changes', () => {
+    it('updates form when remounted with different bed via key prop', () => {
       const { rerender } = render(
-        <BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
+        <BedForm key="new" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
       );
 
       expect(screen.getByLabelText('Bed Name')).toHaveValue('');
 
+      // Parent uses key prop to force remount when switching to edit mode
       rerender(
         <BedForm
+          key="bed-1"
           bed={{ id: 'bed-1', name: 'Updated', width: 5, height: 5 }}
           onSubmit={mockOnSubmit}
           onCancel={mockOnCancel}

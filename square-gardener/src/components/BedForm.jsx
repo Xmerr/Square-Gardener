@@ -1,19 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 
 function BedForm({ bed, onSubmit, onCancel }) {
-  const [name, setName] = useState('');
-  const [width, setWidth] = useState('');
-  const [height, setHeight] = useState('');
+  const [name, setName] = useState(bed?.name || '');
+  const [width, setWidth] = useState(bed?.width?.toString() || '');
+  const [height, setHeight] = useState(bed?.height?.toString() || '');
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (bed) {
-      setName(bed.name || '');
-      setWidth(bed.width?.toString() || '');
-      setHeight(bed.height?.toString() || '');
-    }
-  }, [bed]);
 
   const validate = () => {
     const newErrors = {};
