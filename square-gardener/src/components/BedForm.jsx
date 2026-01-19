@@ -31,11 +31,9 @@ function BedForm({ bed, onSubmit, onCancel }) {
       } else if (heightNum <= 0) {
         newErrors.height = 'Height must be greater than 0';
       }
-    } else {
-      if (!size || !POT_SIZES[size]) {
-        newErrors.size = 'Size is required';
-      }
     }
+    // Note: Pot size validation not needed since size always has valid default
+    // and select only offers valid options from POT_SIZES
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -66,7 +64,8 @@ function BedForm({ bed, onSubmit, onCancel }) {
     ? (parseFloat(width) * parseFloat(height)).toFixed(1)
     : '0';
 
-  const potCapacity = POT_SIZES[size]?.capacity || 0;
+  // Size always has valid default, so POT_SIZES[size] is always defined
+  const potCapacity = POT_SIZES[size].capacity;
 
   // Determine the title and button text based on editing mode and type
   let title;
@@ -126,9 +125,7 @@ function BedForm({ bed, onSubmit, onCancel }) {
             id="pot-size"
             value={size}
             onChange={(e) => setSize(e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-              errors.size ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {Object.entries(POT_SIZES).map(([key, value]) => (
               <option key={key} value={key}>
@@ -136,9 +133,6 @@ function BedForm({ bed, onSubmit, onCancel }) {
               </option>
             ))}
           </select>
-          {errors.size && (
-            <p className="mt-1 text-sm text-red-500">{errors.size}</p>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
