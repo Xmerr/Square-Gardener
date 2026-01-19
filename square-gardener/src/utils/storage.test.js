@@ -25,7 +25,9 @@ import {
   updatePlantDefaults,
   deletePlantDefaults,
   resolveEffectiveValue,
-  resolveAllEffectiveValues
+  resolveAllEffectiveValues,
+  POT_SIZES,
+  getPotCapacity
 } from './storage';
 
 vi.mock('../data/plantLibrary', () => ({
@@ -229,7 +231,7 @@ describe('storage utilities', () => {
       expect(getGardenBeds()).toEqual([]);
     });
 
-    it('returns stored beds', () => {
+    it('returns stored beds with is_pot field', () => {
       const beds = [{ id: 'bed-1', name: 'Main Bed', is_pot: false }];
       sessionStorage.setItem('square-gardener-beds', JSON.stringify(beds));
       expect(getGardenBeds()).toEqual(beds);
@@ -240,6 +242,74 @@ describe('storage utilities', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       expect(getGardenBeds()).toEqual([]);
       expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    it('migrates beds without is_pot field to have is_pot = false', () => {
+      const oldBeds = [
+        { id: 'bed-1', name: 'Old Bed', width: 4, height: 4 }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(oldBeds));
+
+      const result = getGardenBeds();
+      expect(result[0].is_pot).toBe(false);
+    });
+
+    it('migrates multiple beds without is_pot field', () => {
+      const oldBeds = [
+        { id: 'bed-1', name: 'Old Bed 1', width: 4, height: 4 },
+        { id: 'bed-2', name: 'Old Bed 2', width: 2, height: 2 }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(oldBeds));
+
+      const result = getGardenBeds();
+      expect(result[0].is_pot).toBe(false);
+      expect(result[1].is_pot).toBe(false);
+    });
+
+    it('persists migration to storage', () => {
+      const oldBeds = [
+        { id: 'bed-1', name: 'Old Bed', width: 4, height: 4 }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(oldBeds));
+
+      getGardenBeds(); // Triggers migration
+
+      const stored = JSON.parse(sessionStorage.getItem('square-gardener-beds'));
+      expect(stored[0].is_pot).toBe(false);
+    });
+
+    it('does not migrate beds that already have is_pot', () => {
+      const beds = [
+        { id: 'bed-1', name: 'Bed', width: 4, height: 4, is_pot: false },
+        { id: 'pot-1', name: 'Pot', size: 'medium', is_pot: true }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(beds));
+
+      const result = getGardenBeds();
+      expect(result[0].is_pot).toBe(false);
+      expect(result[1].is_pot).toBe(true);
+    });
+
+    it('handles mixed migrated and non-migrated beds', () => {
+      const beds = [
+        { id: 'bed-1', name: 'Old Bed', width: 4, height: 4 },
+        { id: 'bed-2', name: 'New Bed', width: 2, height: 2, is_pot: false }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(beds));
+
+      const result = getGardenBeds();
+      expect(result[0].is_pot).toBe(false);
+      expect(result[1].is_pot).toBe(false);
+    });
+
+    it('migrates beds with is_pot set to null', () => {
+      const beds = [
+        { id: 'bed-1', name: 'Null Bed', width: 4, height: 4, is_pot: null }
+      ];
+      sessionStorage.setItem('square-gardener-beds', JSON.stringify(beds));
+
+      const result = getGardenBeds();
+      expect(result[0].is_pot).toBe(false);
     });
   });
 
@@ -277,11 +347,76 @@ describe('storage utilities', () => {
     });
   });
 
+  describe('POT_SIZES', () => {
+    it('defines small pot size correctly', () => {
+      expect(POT_SIZES.small).toEqual({
+        label: 'Small (4-6 inch)',
+        capacity: 0.25,
+        diameter: '4-6 inches'
+      });
+    });
+
+    it('defines medium pot size correctly', () => {
+      expect(POT_SIZES.medium).toEqual({
+        label: 'Medium (8-10 inch)',
+        capacity: 0.56,
+        diameter: '8-10 inches'
+      });
+    });
+
+    it('defines large pot size correctly', () => {
+      expect(POT_SIZES.large).toEqual({
+        label: 'Large (12-14 inch)',
+        capacity: 1.0,
+        diameter: '12-14 inches'
+      });
+    });
+
+    it('defines extra_large pot size correctly', () => {
+      expect(POT_SIZES.extra_large).toEqual({
+        label: 'Extra Large (16+ inch)',
+        capacity: 2.25,
+        diameter: '16+ inches'
+      });
+    });
+  });
+
+  describe('getPotCapacity', () => {
+    it('returns correct capacity for small pot', () => {
+      expect(getPotCapacity('small')).toBe(0.25);
+    });
+
+    it('returns correct capacity for medium pot', () => {
+      expect(getPotCapacity('medium')).toBe(0.56);
+    });
+
+    it('returns correct capacity for large pot', () => {
+      expect(getPotCapacity('large')).toBe(1.0);
+    });
+
+    it('returns correct capacity for extra_large pot', () => {
+      expect(getPotCapacity('extra_large')).toBe(2.25);
+    });
+
+    it('returns 0 for invalid size', () => {
+      expect(getPotCapacity('invalid')).toBe(0);
+    });
+
+    it('returns 0 for undefined size', () => {
+      expect(getPotCapacity(undefined)).toBe(0);
+    });
+
+    it('returns 0 for null size', () => {
+      expect(getPotCapacity(null)).toBe(0);
+    });
+  });
+
   describe('addGardenBed', () => {
-    it('creates bed with correct schema', () => {
+    it('creates bed with correct schema including is_pot', () => {
       const result = addGardenBed('Main Garden', 4, 4);
       expect(result.id).toMatch(/^bed-/);
       expect(result.name).toBe('Main Garden');
+      expect(result.is_pot).toBe(false);
       expect(result.width).toBe(4);
       expect(result.height).toBe(4);
       expect(result.order).toBe(0);
@@ -297,6 +432,64 @@ describe('storage utilities', () => {
       expect(bed1.order).toBe(0);
       expect(bed2.order).toBe(1);
       expect(bed3.order).toBe(2);
+      expect(getGardenBeds()).toHaveLength(3);
+    });
+
+    it('creates pot with is_pot true and size', () => {
+      const result = addGardenBed('Kitchen Aloe', null, null, { is_pot: true, size: 'medium' });
+      expect(result.id).toMatch(/^bed-/);
+      expect(result.name).toBe('Kitchen Aloe');
+      expect(result.is_pot).toBe(true);
+      expect(result.size).toBe('medium');
+      expect(result.width).toBeUndefined();
+      expect(result.height).toBeUndefined();
+      expect(result.order).toBe(0);
+    });
+
+    it('creates pot with default medium size when no size specified', () => {
+      const result = addGardenBed('My Pot', null, null, { is_pot: true });
+      expect(result.is_pot).toBe(true);
+      expect(result.size).toBe('medium');
+    });
+
+    it('creates pot with small size', () => {
+      const result = addGardenBed('Small Pot', null, null, { is_pot: true, size: 'small' });
+      expect(result.size).toBe('small');
+    });
+
+    it('creates pot with large size', () => {
+      const result = addGardenBed('Large Pot', null, null, { is_pot: true, size: 'large' });
+      expect(result.size).toBe('large');
+    });
+
+    it('creates pot with extra_large size', () => {
+      const result = addGardenBed('Extra Large Pot', null, null, { is_pot: true, size: 'extra_large' });
+      expect(result.size).toBe('extra_large');
+    });
+
+    it('does not include size for beds', () => {
+      const result = addGardenBed('Main Bed', 4, 4, { is_pot: false });
+      expect(result.is_pot).toBe(false);
+      expect(result.width).toBe(4);
+      expect(result.height).toBe(4);
+      expect(result.size).toBeUndefined();
+    });
+
+    it('treats missing is_pot option as false', () => {
+      const result = addGardenBed('Default Bed', 4, 4, {});
+      expect(result.is_pot).toBe(false);
+      expect(result.width).toBe(4);
+      expect(result.height).toBe(4);
+    });
+
+    it('assigns sequential order to mixed beds and pots', () => {
+      const bed1 = addGardenBed('Bed 1', 4, 4);
+      const pot1 = addGardenBed('Pot 1', null, null, { is_pot: true, size: 'small' });
+      const bed2 = addGardenBed('Bed 2', 2, 4);
+
+      expect(bed1.order).toBe(0);
+      expect(pot1.order).toBe(1);
+      expect(bed2.order).toBe(2);
       expect(getGardenBeds()).toHaveLength(3);
     });
   });
@@ -512,6 +705,55 @@ describe('storage utilities', () => {
 
       const result = getBedCapacity(bed.id);
       expect(result.used).toBe(1);
+    });
+
+    it('calculates capacity for small pot', () => {
+      const pot = addGardenBed('Small Pot', null, null, { is_pot: true, size: 'small' });
+      const result = getBedCapacity(pot.id);
+      // 0.25 rounded to 1 decimal place = 0.3 (Math.round(2.5) = 3 in JS)
+      expect(result.total).toBe(0.3);
+    });
+
+    it('calculates capacity for medium pot', () => {
+      const pot = addGardenBed('Medium Pot', null, null, { is_pot: true, size: 'medium' });
+      const result = getBedCapacity(pot.id);
+      // 0.56 rounded to 1 decimal place = 0.6
+      expect(result.total).toBe(0.6);
+    });
+
+    it('calculates capacity for large pot', () => {
+      const pot = addGardenBed('Large Pot', null, null, { is_pot: true, size: 'large' });
+      const result = getBedCapacity(pot.id);
+      expect(result.total).toBe(1);
+    });
+
+    it('calculates capacity for extra_large pot', () => {
+      const pot = addGardenBed('Extra Large Pot', null, null, { is_pot: true, size: 'extra_large' });
+      const result = getBedCapacity(pot.id);
+      // 2.25 rounded to 1 decimal place = 2.3
+      expect(result.total).toBe(2.3);
+    });
+
+    it('calculates used capacity in pot', () => {
+      const pot = addGardenBed('Medium Pot', null, null, { is_pot: true, size: 'medium' });
+      addGardenPlant('lettuce', pot.id, 2); // 2 * 0.25 = 0.5 sq ft
+
+      const result = getBedCapacity(pot.id);
+      // 0.56 rounded to 1 decimal place = 0.6
+      expect(result.total).toBe(0.6);
+      expect(result.used).toBe(0.5);
+      expect(result.available).toBe(0.1); // 0.56 - 0.5 = 0.06 rounded to 0.1
+    });
+
+    it('identifies overcapacity in pot', () => {
+      const pot = addGardenBed('Small Pot', null, null, { is_pot: true, size: 'small' });
+      addGardenPlant('tomato', pot.id, 2); // 2 * 1 = 2 sq ft
+
+      const result = getBedCapacity(pot.id);
+      // 0.25 rounded to 1 decimal place = 0.3
+      expect(result.total).toBe(0.3);
+      expect(result.used).toBe(2);
+      expect(result.isOvercapacity).toBe(true);
     });
   });
 

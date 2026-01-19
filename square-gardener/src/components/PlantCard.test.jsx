@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import PlantCard from './PlantCard';
 
 const mockPlant = {
@@ -20,7 +20,8 @@ const mockGardenPlant = {
   plantId: 'tomato',
   plantedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
   lastWatered: new Date().toISOString(),
-  notes: ''
+  notes: '',
+  harvestDateOverride: null
 };
 
 describe('PlantCard', () => {
@@ -227,6 +228,56 @@ describe('PlantCard', () => {
       const threeCompanionPlant = { ...mockPlant, companionPlants: ['basil', 'carrot'] };
       render(<PlantCard plant={threeCompanionPlant} />);
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('harvest date override display', () => {
+    it('shows Expected: prefix for calculated harvest date', () => {
+      render(<PlantCard plant={mockPlant} gardenPlant={mockGardenPlant} />);
+      expect(screen.getByText(/^Expected:/)).toBeInTheDocument();
+    });
+
+    it('shows Harvest: prefix with manual indicator for override', () => {
+      const gardenPlantWithOverride = {
+        ...mockGardenPlant,
+        harvestDateOverride: '2026-04-15T00:00:00.000Z'
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithOverride} />);
+      expect(screen.getByText(/^Harvest:/)).toBeInTheDocument();
+      expect(screen.getByText(/\(set manually\)/)).toBeInTheDocument();
+    });
+
+    it('uses override date for days remaining calculation', () => {
+      // Create a garden plant with a very close override date
+      const today = new Date();
+      const overrideDate = new Date(today);
+      overrideDate.setDate(overrideDate.getDate() + 5);
+
+      const gardenPlantWithOverride = {
+        ...mockGardenPlant,
+        plantedDate: '2026-01-01T00:00:00.000Z',
+        harvestDateOverride: overrideDate.toISOString()
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithOverride} />);
+      expect(screen.getByText('5 days')).toBeInTheDocument();
+    });
+
+    it('shows Ready! when override date is in the past', () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 5);
+
+      const gardenPlantWithPastOverride = {
+        ...mockGardenPlant,
+        harvestDateOverride: pastDate.toISOString()
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithPastOverride} />);
+      expect(screen.getByText('Ready!')).toBeInTheDocument();
+    });
+
+    it('does not show harvest date display without gardenPlant', () => {
+      render(<PlantCard plant={mockPlant} />);
+      expect(screen.queryByText(/^Expected:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Harvest:/)).not.toBeInTheDocument();
     });
   });
 });
