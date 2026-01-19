@@ -109,6 +109,22 @@ describe('storage utilities', () => {
       addGardenPlant('carrot', 'bed-2');
       expect(getGardenPlants()).toHaveLength(3);
     });
+
+    it('adds a new plant with null variety by default', () => {
+      const result = addGardenPlant('tomato', 'bed-1');
+      expect(result.variety).toBeNull();
+    });
+
+    it('adds a new plant with custom variety', () => {
+      const result = addGardenPlant('tomato', 'bed-1', 1, new Date().toISOString(), 'Cherokee Purple');
+      expect(result.variety).toBe('Cherokee Purple');
+    });
+
+    it('persists variety field in storage', () => {
+      addGardenPlant('tomato', 'bed-1', 1, new Date().toISOString(), 'Brandywine');
+      const plants = getGardenPlants();
+      expect(plants[0].variety).toBe('Brandywine');
+    });
   });
 
   describe('removeGardenPlant', () => {

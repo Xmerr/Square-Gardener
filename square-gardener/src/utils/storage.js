@@ -42,14 +42,16 @@ export const saveGardenPlants = (plants) => {
  * @param {string} bedId - ID of the bed to assign the plant to
  * @param {number} quantity - Number of plants (default: 1)
  * @param {string} plantedDate - ISO 8601 date string (default: now)
+ * @param {string|null} variety - Plant variety/cultivar name (default: null)
  */
-export const addGardenPlant = (plantId, bedId, quantity = 1, plantedDate = new Date().toISOString()) => {
+export const addGardenPlant = (plantId, bedId, quantity = 1, plantedDate = new Date().toISOString(), variety = null) => {
   const plants = getGardenPlants();
   const newPlant = {
     id: `garden-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     plantId,
     bedId,
     quantity,
+    variety,
     plantedDate,
     lastWatered: plantedDate,
     notes: ''
