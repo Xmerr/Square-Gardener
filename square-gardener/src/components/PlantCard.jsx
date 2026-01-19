@@ -35,7 +35,12 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
     <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="text-lg font-semibold text-primary">{plant.name}</h3>
+          <h3 className="text-lg font-semibold text-primary">
+            {plant.name}
+            {gardenPlant?.variety && (
+              <span className="text-gray-600 font-normal"> - {gardenPlant.variety}</span>
+            )}
+          </h3>
           <p className="text-sm text-gray-500 italic">{plant.scientificName}</p>
         </div>
         <div className="text-2xl">{getSunIcon(plant.sunRequirement)}</div>
@@ -130,7 +135,8 @@ PlantCard.propTypes = {
     plantId: PropTypes.string.isRequired,
     plantedDate: PropTypes.string.isRequired,
     lastWatered: PropTypes.string.isRequired,
-    notes: PropTypes.string
+    notes: PropTypes.string,
+    variety: PropTypes.string
   }),
   onAdd: PropTypes.func,
   onRemove: PropTypes.func,

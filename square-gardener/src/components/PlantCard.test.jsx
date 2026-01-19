@@ -132,6 +132,30 @@ describe('PlantCard', () => {
     });
   });
 
+  describe('variety display', () => {
+    it('shows variety when gardenPlant has variety', () => {
+      const gardenPlantWithVariety = { ...mockGardenPlant, variety: 'Cherokee Purple' };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithVariety} />);
+      expect(screen.getByText('- Cherokee Purple')).toBeInTheDocument();
+    });
+
+    it('does not show variety when gardenPlant.variety is null', () => {
+      const gardenPlantWithNullVariety = { ...mockGardenPlant, variety: null };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithNullVariety} />);
+      expect(screen.queryByText(/-/)).not.toBeInTheDocument();
+    });
+
+    it('does not show variety when gardenPlant.variety is undefined', () => {
+      render(<PlantCard plant={mockPlant} gardenPlant={mockGardenPlant} />);
+      expect(screen.queryByText(/- /)).not.toBeInTheDocument();
+    });
+
+    it('does not show variety without gardenPlant', () => {
+      render(<PlantCard plant={mockPlant} />);
+      expect(screen.queryByText(/- /)).not.toBeInTheDocument();
+    });
+  });
+
   describe('add button', () => {
     it('shows add button when showAddButton is true', () => {
       const onAdd = vi.fn();
