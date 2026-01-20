@@ -16,15 +16,12 @@ describe('harvestDate utilities', () => {
       const result = calculateHarvestDate(plantedDate, daysToMaturity);
       const harvestDate = new Date(result);
 
-      // Use UTC methods for consistent timezone handling
-      // Jan 1 + 70 days = March 12 (Jan: 31 + Feb: 28 + 11 = 70)
-      // But setDate adds days to the *current* day, so Jan 1 + 70 = March 12
-      // Actually: Jan has 31 days, so day 31 is Jan 31
-      // Feb has 28 days (2026 not leap), day 59 is Feb 28
-      // March 11 is day 70
+      // Jan 1 + 70 days = March 12
+      // Jan: 31 days, Feb: 28 days (2026 not leap) = 59 days to Mar 1
+      // 70 - 59 = 11 more days into March = March 12
       expect(harvestDate.getUTCFullYear()).toBe(2026);
       expect(harvestDate.getUTCMonth()).toBe(2); // March (0-indexed)
-      expect(harvestDate.getUTCDate()).toBe(11);
+      expect(harvestDate.getUTCDate()).toBe(12);
     });
 
     it('handles year boundary correctly', () => {

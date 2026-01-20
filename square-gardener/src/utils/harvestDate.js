@@ -12,7 +12,7 @@
 export const calculateHarvestDate = (plantedDate, daysToMaturity) => {
   const planted = new Date(plantedDate);
   const harvest = new Date(planted);
-  harvest.setDate(harvest.getDate() + daysToMaturity);
+  harvest.setUTCDate(harvest.getUTCDate() + daysToMaturity);
   return harvest.toISOString();
 };
 
