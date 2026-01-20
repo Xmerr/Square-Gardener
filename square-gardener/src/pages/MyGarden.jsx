@@ -3,11 +3,13 @@ import PlantCard from '../components/PlantCard';
 import BedManager from '../components/BedManager';
 import BedSelector from '../components/BedSelector';
 import BedForm from '../components/BedForm';
+import PlantForm from '../components/PlantForm';
 import { plantLibrary, getPlantById } from '../data/plantLibrary';
 import {
   getGardenPlants,
   addGardenPlant,
   removeGardenPlant,
+  updateGardenPlant,
   getGardenBeds,
   getBedCapacity,
   addGardenBed
@@ -24,6 +26,7 @@ function MyGarden() {
   const [plantQuantity, setPlantQuantity] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeason, setFilterSeason] = useState('all');
+  const [editingPlant, setEditingPlant] = useState(null);
 
   const capacities = useMemo(() => {
     const caps = {};
@@ -59,6 +62,52 @@ function MyGarden() {
       removeGardenPlant(gardenPlantId);
       loadData();
     }
+  };
+
+  const handleEditPlant = (gardenPlant) => {
+    setEditingPlant(gardenPlant);
+  };
+
+  const handleEditSubmit = (formData) => {
+    const updates = {
+      bedId: formData.bedId,
+      variety: formData.variety,
+      plantedDate: formData.plantedDate,
+      quantity: formData.quantity,
+      daysToMaturityOverride: formData.daysToMaturityOverride,
+      spacePerPlantOverride: formData.spacePerPlantOverride
+    };
+
+    // If plant date changed and harvestDateOverride was not explicitly set,
+    // we should clear any existing override so harvest is recalculated
+    // This happens naturally since we're not including harvestDateOverride in updates
+    // unless the user explicitly changed it
+
+    updateGardenPlant(editingPlant.id, updates);
+    loadData();
+    setEditingPlant(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditingPlant(null);
+  };
+
+  const handleResetToDefaults = () => {
+    // Reset to defaults: clear all overrides
+    const updates = {
+      daysToMaturityOverride: null,
+      spacePerPlantOverride: null,
+      harvestDateOverride: null
+    };
+
+    updateGardenPlant(editingPlant.id, updates);
+    loadData();
+
+    // Update the editing plant state to reflect the reset values
+    setEditingPlant({
+      ...editingPlant,
+      ...updates
+    });
   };
 
   const handleCreateBed = (data) => {
@@ -203,6 +252,7 @@ function MyGarden() {
                             plant={plant}
                             gardenPlant={gardenPlant}
                             onRemove={handleRemovePlant}
+                            onEdit={handleEditPlant}
                           />
                         );
                       })}
@@ -226,6 +276,7 @@ function MyGarden() {
                           plant={plant}
                           gardenPlant={gardenPlant}
                           onRemove={handleRemovePlant}
+                          onEdit={handleEditPlant}
                         />
                       );
                     })}
@@ -362,6 +413,29 @@ function MyGarden() {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Plant Modal */}
+      {editingPlant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <PlantForm
+              mode="edit"
+              plant={editingPlant}
+              onSubmit={handleEditSubmit}
+              onCancel={handleEditCancel}
+            />
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleResetToDefaults}
+                className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Reset to Default Values
+              </button>
             </div>
           </div>
         </div>

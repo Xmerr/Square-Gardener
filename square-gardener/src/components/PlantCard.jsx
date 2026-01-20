@@ -1,6 +1,11 @@
 import PropTypes from 'prop-types';
+import {
+  getEffectiveHarvestDate,
+  formatHarvestDateDisplay,
+  getDaysUntilHarvest
+} from '../utils/harvestDate';
 
-function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false }) {
+function PlantCard({ plant, gardenPlant, onAdd, onRemove, onEdit, showAddButton = false }) {
   const getSunIcon = (requirement) => {
     switch (requirement) {
       case 'full':
@@ -18,18 +23,23 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
     return Math.round(1 / squaresPerPlant);
   };
 
-  const getDaysUntilHarvest = () => {
+  const getHarvestInfo = () => {
     if (!gardenPlant) return null;
 
-    const plantedDate = new Date(gardenPlant.plantedDate);
-    const today = new Date();
-    const daysGrown = Math.floor((today - plantedDate) / (1000 * 60 * 60 * 24));
-    const daysRemaining = plant.daysToMaturity - daysGrown;
+    const { date, isOverride } = getEffectiveHarvestDate(
+      gardenPlant.plantedDate,
+      plant.daysToMaturity,
+      gardenPlant.harvestDateOverride
+    );
 
-    return daysRemaining;
+    return {
+      daysRemaining: getDaysUntilHarvest(date),
+      displayText: formatHarvestDateDisplay(date, isOverride),
+      isOverride
+    };
   };
 
-  const daysUntilHarvest = getDaysUntilHarvest();
+  const harvestInfo = getHarvestInfo();
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
@@ -67,12 +77,17 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
           <span className="font-medium capitalize">{plant.plantingSeason.join(', ')}</span>
         </div>
 
-        {gardenPlant && daysUntilHarvest !== null && (
-          <div className="flex justify-between pt-2 border-t border-gray-200">
-            <span className="text-gray-600">Harvest in:</span>
-            <span className={`font-bold ${daysUntilHarvest <= 0 ? 'text-green-600' : 'text-primary'}`}>
-              {daysUntilHarvest <= 0 ? 'Ready!' : `${daysUntilHarvest} days`}
-            </span>
+        {gardenPlant && harvestInfo && (
+          <div className="pt-2 border-t border-gray-200 space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Harvest in:</span>
+              <span className={`font-bold ${harvestInfo.daysRemaining <= 0 ? 'text-green-600' : 'text-primary'}`}>
+                {harvestInfo.daysRemaining <= 0 ? 'Ready!' : `${harvestInfo.daysRemaining} days`}
+              </span>
+            </div>
+            <div className="text-xs text-gray-500">
+              {harvestInfo.displayText}
+            </div>
           </div>
         )}
 
@@ -84,7 +99,7 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
         )}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 space-y-2">
         {showAddButton && onAdd && (
           <button
             onClick={() => onAdd(plant.id)}
@@ -94,13 +109,25 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
           </button>
         )}
 
-        {!showAddButton && onRemove && gardenPlant && (
-          <button
-            onClick={() => onRemove(gardenPlant.id)}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded transition-colors"
-          >
-            Remove from Garden
-          </button>
+        {!showAddButton && gardenPlant && (
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(gardenPlant)}
+                className="flex-1 bg-primary hover:bg-primary-light text-white font-medium py-2 px-4 rounded transition-colors"
+              >
+                Edit
+              </button>
+            )}
+            {onRemove && (
+              <button
+                onClick={() => onRemove(gardenPlant.id)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -136,10 +163,12 @@ PlantCard.propTypes = {
     plantedDate: PropTypes.string.isRequired,
     lastWatered: PropTypes.string.isRequired,
     notes: PropTypes.string,
-    variety: PropTypes.string
+    variety: PropTypes.string,
+    harvestDateOverride: PropTypes.string
   }),
   onAdd: PropTypes.func,
   onRemove: PropTypes.func,
+  onEdit: PropTypes.func,
   showAddButton: PropTypes.bool
 };
 

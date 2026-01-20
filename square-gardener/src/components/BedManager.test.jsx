@@ -162,7 +162,7 @@ describe('BedManager', () => {
     });
 
     it('updates bed and refreshes list', () => {
-      storage.updateGardenBed.mockReturnValue({ id: 'bed-1', name: 'Updated', width: 6, height: 4 });
+      storage.updateGardenBed.mockReturnValue({ id: 'bed-1', name: 'Updated', width: 6, height: 4, is_pot: false });
 
       render(<BedManager onBedChange={mockOnBedChange} />);
 
@@ -173,6 +173,7 @@ describe('BedManager', () => {
 
       expect(storage.updateGardenBed).toHaveBeenCalledWith('bed-1', {
         name: 'Updated',
+        is_pot: false,
         width: 6,
         height: 4
       });

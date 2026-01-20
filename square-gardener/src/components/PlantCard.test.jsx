@@ -20,7 +20,8 @@ const mockGardenPlant = {
   plantId: 'tomato',
   plantedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
   lastWatered: new Date().toISOString(),
-  notes: ''
+  notes: '',
+  harvestDateOverride: null
 };
 
 describe('PlantCard', () => {
@@ -187,7 +188,7 @@ describe('PlantCard', () => {
           showAddButton={false}
         />
       );
-      expect(screen.getByText('Remove from Garden')).toBeInTheDocument();
+      expect(screen.getByText('Remove')).toBeInTheDocument();
     });
 
     it('calls onRemove with garden plant id when clicked', () => {
@@ -200,14 +201,82 @@ describe('PlantCard', () => {
           showAddButton={false}
         />
       );
-      fireEvent.click(screen.getByText('Remove from Garden'));
+      fireEvent.click(screen.getByText('Remove'));
       expect(onRemove).toHaveBeenCalledWith('garden-123');
     });
 
     it('does not show remove button without gardenPlant', () => {
       const onRemove = vi.fn();
       render(<PlantCard plant={mockPlant} onRemove={onRemove} showAddButton={false} />);
-      expect(screen.queryByText('Remove from Garden')).not.toBeInTheDocument();
+      expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('edit button', () => {
+    it('shows edit button when gardenPlant and onEdit provided', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+
+    it('calls onEdit with gardenPlant when clicked', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      fireEvent.click(screen.getByText('Edit'));
+      expect(onEdit).toHaveBeenCalledWith(mockGardenPlant);
+    });
+
+    it('does not show edit button without onEdit prop', () => {
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          showAddButton={false}
+        />
+      );
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    });
+
+    it('does not show edit button without gardenPlant', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    });
+
+    it('shows both edit and remove buttons when both handlers provided', () => {
+      const onEdit = vi.fn();
+      const onRemove = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          onRemove={onRemove}
+          showAddButton={false}
+        />
+      );
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+      expect(screen.getByText('Remove')).toBeInTheDocument();
     });
   });
 
@@ -227,6 +296,56 @@ describe('PlantCard', () => {
       const threeCompanionPlant = { ...mockPlant, companionPlants: ['basil', 'carrot'] };
       render(<PlantCard plant={threeCompanionPlant} />);
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('harvest date override display', () => {
+    it('shows Expected: prefix for calculated harvest date', () => {
+      render(<PlantCard plant={mockPlant} gardenPlant={mockGardenPlant} />);
+      expect(screen.getByText(/^Expected:/)).toBeInTheDocument();
+    });
+
+    it('shows Harvest: prefix with manual indicator for override', () => {
+      const gardenPlantWithOverride = {
+        ...mockGardenPlant,
+        harvestDateOverride: '2026-04-15T00:00:00.000Z'
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithOverride} />);
+      expect(screen.getByText(/^Harvest:/)).toBeInTheDocument();
+      expect(screen.getByText(/\(set manually\)/)).toBeInTheDocument();
+    });
+
+    it('uses override date for days remaining calculation', () => {
+      // Create a garden plant with a very close override date
+      const today = new Date();
+      const overrideDate = new Date(today);
+      overrideDate.setDate(overrideDate.getDate() + 5);
+
+      const gardenPlantWithOverride = {
+        ...mockGardenPlant,
+        plantedDate: '2026-01-01T00:00:00.000Z',
+        harvestDateOverride: overrideDate.toISOString()
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithOverride} />);
+      expect(screen.getByText('5 days')).toBeInTheDocument();
+    });
+
+    it('shows Ready! when override date is in the past', () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 5);
+
+      const gardenPlantWithPastOverride = {
+        ...mockGardenPlant,
+        harvestDateOverride: pastDate.toISOString()
+      };
+      render(<PlantCard plant={mockPlant} gardenPlant={gardenPlantWithPastOverride} />);
+      expect(screen.getByText('Ready!')).toBeInTheDocument();
+    });
+
+    it('does not show harvest date display without gardenPlant', () => {
+      render(<PlantCard plant={mockPlant} />);
+      expect(screen.queryByText(/^Expected:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Harvest:/)).not.toBeInTheDocument();
     });
   });
 });
