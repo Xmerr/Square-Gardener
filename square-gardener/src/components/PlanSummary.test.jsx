@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import PlanSummary from './PlanSummary';
 import * as storage from '../utils/storage';
 import * as frostDateStorage from '../utils/frostDateStorage';
+import * as plantLibrary from '../data/plantLibrary';
 
 const mockNavigateFn = vi.fn();
 
@@ -17,6 +18,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../utils/storage');
 vi.mock('../utils/frostDateStorage');
+vi.mock('../data/plantLibrary');
 
 describe('PlanSummary', () => {
   beforeEach(() => {
@@ -44,6 +46,17 @@ describe('PlanSummary', () => {
       lastSpringFrost: '2026-04-15',
       firstFallFrost: '2026-10-15',
       zipCode: '60601'
+    });
+    // Mock plant library for default plants
+    vi.mocked(plantLibrary.getPlantById).mockImplementation((id) => {
+      const plants = {
+        tomato: { id: 'tomato', name: 'Tomato', squaresPerPlant: 1, daysToMaturity: 80, plantingSeason: ['spring', 'summer'] },
+        basil: { id: 'basil', name: 'Basil', squaresPerPlant: 0.25, daysToMaturity: 60, plantingSeason: ['spring', 'summer'] },
+        garlic: { id: 'garlic', name: 'Garlic', squaresPerPlant: 0.11, daysToMaturity: 240, plantingSeason: ['fall'] },
+        cucumber: { id: 'cucumber', name: 'Cucumber', squaresPerPlant: 1, daysToMaturity: 55, plantingSeason: ['spring', 'summer'] },
+        lettuce: { id: 'lettuce', name: 'Lettuce', squaresPerPlant: 0.25, daysToMaturity: 45, plantingSeason: ['spring', 'fall'] }
+      };
+      return plants[id] || null;
     });
   });
 
@@ -335,16 +348,18 @@ describe('PlanSummary', () => {
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
     });
+
   });
 
   describe('Planting Date Calculations', () => {
-    it('should calculate fall planting dates correctly', async () => {
+    it('should calculate fall planting dates correctly for fall-only plants', async () => {
+      // Garlic has plantingSeason: ['fall'] only - no spring
       const fallSelections = [
-        { plantId: 'spinach', quantity: 9 }
+        { plantId: 'garlic', quantity: 9 }
       ];
       const fallArrangement = {
-        grid: [['spinach']],
-        placements: [{ plantId: 'spinach', row: 0, col: 0 }],
+        grid: [['garlic']],
+        placements: [{ plantId: 'garlic', row: 0, col: 0 }],
         success: true,
         stats: { uniquePlants: 1, filledSquares: 1, totalSquares: 1, companionAdjacencies: 0 }
       };
@@ -362,23 +377,107 @@ describe('PlanSummary', () => {
         expect(storage.addGardenPlant).toHaveBeenCalled();
       });
 
-      const spinachCall = vi.mocked(storage.addGardenPlant).mock.calls.find(
-        call => call[0] === 'spinach'
+      const garlicCall = vi.mocked(storage.addGardenPlant).mock.calls.find(
+        call => call[0] === 'garlic'
       );
-      expect(spinachCall).toBeDefined();
-      const plantingDate = new Date(spinachCall[3]);
+      expect(garlicCall).toBeDefined();
+      const plantingDate = new Date(garlicCall[3]);
       const firstFall = new Date('2026-10-15');
-
+      // Garlic has 240 days to maturity, so: 10/15 - 240 - 14 = early February (previous year)
+      // But the date should be calculated as before first fall frost
       expect(plantingDate < firstFall).toBe(true);
     });
 
-    it('should calculate summer planting dates when plant is summer only', async () => {
-      const summerSelections = [
+    it('should use default 60 days for fall plants without daysToMaturity', async () => {
+      // Mock a fall-only plant without daysToMaturity to test the || 60 fallback
+      vi.mocked(plantLibrary.getPlantById).mockImplementation((id) => {
+        if (id === 'fall-plant') {
+          return { id: 'fall-plant', name: 'Fall Plant', squaresPerPlant: 1, plantingSeason: ['fall'] };
+        }
+        return null;
+      });
+
+      const fallSelections = [{ plantId: 'fall-plant', quantity: 1 }];
+      const fallArrangement = {
+        grid: [['fall-plant']],
+        placements: [{ plantId: 'fall-plant', row: 0, col: 0 }],
+        success: true,
+        stats: { uniquePlants: 1, filledSquares: 1, totalSquares: 1, companionAdjacencies: 0 }
+      };
+
+      renderComponent({
+        arrangement: fallArrangement,
+        plantSelections: fallSelections,
+        bed: { id: 'bed-1', name: 'Fall Bed', width: 1, height: 1 }
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Apply to Garden' }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Confirm' })[0]);
+
+      await waitFor(() => {
+        expect(storage.addGardenPlant).toHaveBeenCalled();
+      });
+
+      const plantCall = vi.mocked(storage.addGardenPlant).mock.calls[0];
+      expect(plantCall).toBeDefined();
+      const plantingDate = new Date(plantCall[3]);
+      // Default is 60 days: 10/15 - 60 - 14 = August 1 (approximately)
+      const expectedDate = new Date('2026-10-15');
+      expectedDate.setDate(expectedDate.getDate() - 60 - 14);
+
+      expect(plantingDate.toDateString()).toBe(expectedDate.toDateString());
+    });
+
+    it('should calculate spring planting dates for spring plants', async () => {
+      // Cucumber has spring in its planting season, so it gets spring date
+      const springSelections = [
         { plantId: 'cucumber', quantity: 1 }
       ];
-      const summerArrangement = {
+      const springArrangement = {
         grid: [['cucumber']],
         placements: [{ plantId: 'cucumber', row: 0, col: 0 }],
+        success: true,
+        stats: { uniquePlants: 1, filledSquares: 1, totalSquares: 1, companionAdjacencies: 0 }
+      };
+
+      renderComponent({
+        arrangement: springArrangement,
+        plantSelections: springSelections,
+        bed: { id: 'bed-1', name: 'Spring Bed', width: 1, height: 1 }
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Apply to Garden' }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Confirm' })[0]);
+
+      await waitFor(() => {
+        expect(storage.addGardenPlant).toHaveBeenCalled();
+      });
+
+      const cucumberCall = vi.mocked(storage.addGardenPlant).mock.calls[0];
+      expect(cucumberCall).toBeDefined();
+      const plantingDate = new Date(cucumberCall[3]);
+      const lastSpring = new Date('2026-04-15');
+      const expectedDate = new Date(lastSpring);
+      expectedDate.setDate(expectedDate.getDate() + 7);
+
+      expect(plantingDate.toDateString()).toBe(expectedDate.toDateString());
+    });
+
+    it('should calculate summer planting dates for summer-only plants (fallback)', async () => {
+      // Mock a summer-only plant (no spring or fall)
+      vi.mocked(plantLibrary.getPlantById).mockImplementation((id) => {
+        if (id === 'summer-melon') {
+          return { id: 'summer-melon', name: 'Summer Melon', squaresPerPlant: 2, daysToMaturity: 90, plantingSeason: ['summer'] };
+        }
+        return null;
+      });
+
+      const summerSelections = [
+        { plantId: 'summer-melon', quantity: 1 }
+      ];
+      const summerArrangement = {
+        grid: [['summer-melon']],
+        placements: [{ plantId: 'summer-melon', row: 0, col: 0 }],
         success: true,
         stats: { uniquePlants: 1, filledSquares: 1, totalSquares: 1, companionAdjacencies: 0 }
       };
@@ -396,12 +495,12 @@ describe('PlanSummary', () => {
         expect(storage.addGardenPlant).toHaveBeenCalled();
       });
 
-      const cucumberCall = vi.mocked(storage.addGardenPlant).mock.calls[0];
-      expect(cucumberCall).toBeDefined();
-      const plantingDate = new Date(cucumberCall[3]);
+      const melonCall = vi.mocked(storage.addGardenPlant).mock.calls[0];
+      expect(melonCall).toBeDefined();
+      const plantingDate = new Date(melonCall[3]);
       const lastSpring = new Date('2026-04-15');
       const expectedDate = new Date(lastSpring);
-      expectedDate.setDate(expectedDate.getDate() + 7);
+      expectedDate.setDate(expectedDate.getDate() + 60); // Summer fallback is 60 days after spring frost
 
       expect(plantingDate.toDateString()).toBe(expectedDate.toDateString());
     });
@@ -445,6 +544,19 @@ describe('PlanSummary', () => {
 
       renderComponent({ arrangement: minimalArrangement });
       expect(screen.getByText('Plan Summary')).toBeInTheDocument();
+    });
+
+    it('should handle arrangement without placements (fallback to 0)', () => {
+      // Arrangement with no stats and no placements to test the || 0 fallback
+      const arrangementNoPlacement = {
+        grid: [['tomato']]
+        // No placements property, no stats
+      };
+
+      renderComponent({ arrangement: arrangementNoPlacement });
+      expect(screen.getByText('Plan Summary')).toBeInTheDocument();
+      // Should default filledSquares to 0
+      expect(screen.getByText(/0 \/ 16 squares/)).toBeInTheDocument();
     });
 
     it('should handle plant selections with undefined plant', async () => {

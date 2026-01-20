@@ -37,16 +37,6 @@ function Planner() {
   const handleGeneratePlan = () => {
     setError(null);
 
-    if (!selectedBed) {
-      setError('Please select a bed first');
-      return;
-    }
-
-    if (selectedPlants.length === 0) {
-      setError('Please select at least one plant');
-      return;
-    }
-
     try {
       const result = generateArrangement({
         width: selectedBed.width,
@@ -100,7 +90,7 @@ function Planner() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Bed</h2>
               <select
-                value={selectedBed?.id || ''}
+                value={selectedBed.id}
                 onChange={(e) => handleBedChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
               >

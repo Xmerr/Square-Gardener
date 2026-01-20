@@ -416,6 +416,26 @@ describe('BedCard', () => {
       expect(screen.getByText('Aloe (2)')).toBeInTheDocument();
     });
 
+    it('defaults quantity to 1 when plants have no quantity specified', () => {
+      const plants = [
+        { id: 'gp-1', plantId: 'aloe', bedId: 'pot-1' }, // No quantity
+        { id: 'gp-2', plantId: 'aloe', bedId: 'pot-1' }  // No quantity
+      ];
+
+      render(
+        <BedCard
+          bed={mockPot}
+          capacity={mockCapacity}
+          plantCount={2}
+          plants={plants}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText('Aloe (2)')).toBeInTheDocument();
+    });
+
     it('displays plant list with multiple plant types', () => {
       const plants = [
         { id: 'gp-1', plantId: 'tomato', bedId: 'pot-1', quantity: 1 },
@@ -436,7 +456,7 @@ describe('BedCard', () => {
       expect(screen.getByText(/Tomato \(1\), Lettuce \(2\)/)).toBeInTheDocument();
     });
 
-    it('does not display plant list when pot has no plants', () => {
+    it('displays "No plants" when pot has no plants', () => {
       render(
         <BedCard
           bed={mockPot}
@@ -448,7 +468,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.queryByText('No plants')).not.toBeInTheDocument();
+      expect(screen.getByText('No plants')).toBeInTheDocument();
     });
 
     it('handles plants array as undefined', () => {
@@ -463,6 +483,7 @@ describe('BedCard', () => {
       );
 
       expect(screen.getByText('0 plants')).toBeInTheDocument();
+      expect(screen.getByText('No plants')).toBeInTheDocument();
     });
 
     it('handles plants with unknown plantId gracefully', () => {

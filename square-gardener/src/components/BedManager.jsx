@@ -144,7 +144,7 @@ function BedManager({ onBedChange }) {
               bed={bed}
               capacity={capacities[bed.id] || { total: 0, used: 0, available: 0, isOvercapacity: false }}
               plantCount={plantCounts[bed.id] || 0}
-              plants={plantsByBed[bed.id] || []}
+              plants={plantsByBed[bed.id]}
               onEdit={handleEdit}
               onDelete={handleDeleteBed}
             />

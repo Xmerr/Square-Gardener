@@ -128,7 +128,7 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete }) {
           </svg>
           {plantCount} {plantCount === 1 ? 'plant' : 'plants'}
         </div>
-        {isPot && plants && plants.length > 0 && (
+        {isPot && (
           <div className="text-xs text-gray-500 ml-5">
             {renderPlantList()}
           </div>

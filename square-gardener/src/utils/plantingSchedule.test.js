@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import {
   addDays,
   subtractDays,
@@ -10,6 +10,7 @@ import {
   getSeasonColor
 } from './plantingSchedule';
 import { plantLibrary } from '../data/plantLibrary';
+import * as plantLibraryModule from '../data/plantLibrary';
 
 describe('plantingSchedule utilities', () => {
   describe('addDays', () => {
@@ -240,13 +241,33 @@ describe('plantingSchedule utilities', () => {
     });
 
     test('should skip plants without planting windows', () => {
+      // Spy on getPlantById to return a plant with no valid seasons
+      const spy = vi.spyOn(plantLibraryModule, 'getPlantById');
+      spy.mockImplementation((id) => {
+        if (id === 'no-season-plant') {
+          return {
+            id: 'no-season-plant',
+            name: 'No Season Plant',
+            plantingSeason: [], // Empty season array - calculatePlantingWindow returns null
+            daysToMaturity: 60
+          };
+        }
+        // Return tomato normally
+        return plantLibrary.find(p => p.id === id) || null;
+      });
+
       const selections = [
-        { plantId: 'tomato', quantity: 4 }
+        { plantId: 'tomato', quantity: 4 },
+        { plantId: 'no-season-plant', quantity: 2 }
       ];
 
-      // Mock a plant with no seasons (edge case)
       const schedule = generatePlantingSchedule(selections, frostDates);
-      expect(Array.isArray(schedule)).toBe(true);
+
+      // Should only include tomato, not the plant with no seasons
+      expect(schedule).toHaveLength(1);
+      expect(schedule[0].plantId).toBe('tomato');
+
+      spy.mockRestore();
     });
   });
 
