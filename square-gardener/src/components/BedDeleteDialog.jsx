@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { getGardenBeds, getPlantsByBed } from '../utils/storage';
+import { getGardenBeds, getPlantsByBed, getBedCapacity } from '../utils/storage';
 import { getPlantById } from '../data/plantLibrary';
 
 function BedDeleteDialog({ bed, onConfirm, onCancel }) {
@@ -10,6 +10,31 @@ function BedDeleteDialog({ bed, onConfirm, onCancel }) {
 
   const plantsInBed = useMemo(() => getPlantsByBed(bed.id), [bed.id]);
   const otherBeds = useMemo(() => getGardenBeds().filter(b => b.id !== bed.id), [bed.id]);
+
+  // Calculate total squares needed by plants being moved
+  const totalSquaresNeeded = useMemo(() => {
+    return plantsInBed.reduce((sum, gardenPlant) => {
+      const plantInfo = getPlantById(gardenPlant.plantId);
+      if (!plantInfo) return sum;
+      const quantity = gardenPlant.quantity || 1;
+      return sum + (quantity * plantInfo.squaresPerPlant);
+    }, 0);
+  }, [plantsInBed]);
+
+  // Calculate overcrowding status for destination bed
+  const overcrowdingWarning = useMemo(() => {
+    if (!destinationBedId || deleteAllPlants) return null;
+
+    const capacity = getBedCapacity(destinationBedId);
+    const spaceAfterMove = capacity.available - totalSquaresNeeded;
+
+    if (spaceAfterMove < 0) {
+      const overage = Math.abs(spaceAfterMove);
+      return `Warning: This will overcrowd the destination by ${overage.toFixed(1)} square${overage !== 1 ? 's' : ''}. Consider moving fewer plants or choosing a larger location.`;
+    }
+
+    return null;
+  }, [destinationBedId, deleteAllPlants, totalSquaresNeeded]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -138,6 +163,12 @@ function BedDeleteDialog({ bed, onConfirm, onCancel }) {
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            {overcrowdingWarning && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">{overcrowdingWarning}</p>
               </div>
             )}
 

@@ -59,9 +59,15 @@ describe('BedDeleteDialog Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     plantLibrary.getPlantById.mockImplementation((id) => {
-      if (id === 'tomato') return { id: 'tomato', name: 'Tomato' };
-      if (id === 'lettuce') return { id: 'lettuce', name: 'Lettuce' };
+      if (id === 'tomato') return { id: 'tomato', name: 'Tomato', squaresPerPlant: 1 };
+      if (id === 'lettuce') return { id: 'lettuce', name: 'Lettuce', squaresPerPlant: 0.25 };
       return null;
+    });
+    storage.getBedCapacity.mockReturnValue({
+      total: 32,
+      used: 10,
+      available: 22,
+      isOvercapacity: false
     });
   });
 
@@ -420,6 +426,277 @@ describe('BedDeleteDialog Component', () => {
         deleteAllPlants: false,
         destinationBedId: 'pot-2'
       });
+    });
+  });
+
+  describe('Overcrowding Validation', () => {
+    beforeEach(() => {
+      storage.getPlantsByBed.mockReturnValue(mockPlants);
+      storage.getGardenBeds.mockReturnValue([mockBed, ...mockOtherBeds]);
+    });
+
+    it('should not show warning when destination has enough space', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 10,
+        available: 22,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      expect(screen.queryByText(/Warning.*overcrowd/i)).not.toBeInTheDocument();
+    });
+
+    it('should show warning when destination would be overcrowded', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/Warning.*overcrowd/i)).toBeInTheDocument();
+    });
+
+    it('should calculate correct overage amount in warning', () => {
+      // Plants need 2.25 squares (2 tomatoes @ 1 each + 1 lettuce @ 0.25)
+      // Available space: 2 squares
+      // Overage: 0.25 squares (displayed as 0.3 due to toFixed(1) rounding)
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/overcrowd the destination by 0\.3 square/i)).toBeInTheDocument();
+    });
+
+    it('should show singular "square" when overage is exactly 1', () => {
+      // Set available to 1.25 so that 2.25 - 1.25 = 1.0 square overage
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30.75,
+        available: 1.25,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // Should use singular "square" when overage is exactly 1.0
+      expect(screen.getByText(/1\.0 square\./i)).toBeInTheDocument();
+      expect(screen.queryByText(/1\.0 squares/i)).not.toBeInTheDocument();
+    });
+
+    it('should show plural "squares" when overage is greater than 1', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 0.5,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/1\.8 squares/i)).toBeInTheDocument();
+    });
+
+    it('should not show warning when delete all plants is checked', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // Warning should appear
+      expect(screen.getByText(/Warning.*overcrowd/i)).toBeInTheDocument();
+
+      // Check delete all plants
+      const checkbox = screen.getByLabelText(/Delete all plants in this bed/);
+      fireEvent.click(checkbox);
+
+      // Warning should disappear
+      expect(screen.queryByText(/Warning.*overcrowd/i)).not.toBeInTheDocument();
+    });
+
+    it('should hide warning when destination is deselected', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // Warning should appear
+      expect(screen.getByText(/Warning.*overcrowd/i)).toBeInTheDocument();
+
+      // Deselect destination
+      fireEvent.change(dropdown, { target: { value: '' } });
+
+      // Warning should disappear
+      expect(screen.queryByText(/Warning.*overcrowd/i)).not.toBeInTheDocument();
+    });
+
+    it('should still allow submission when overcrowding warning is shown', () => {
+      storage.getBedCapacity.mockReturnValue({
+        total: 32,
+        used: 30,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/Warning.*overcrowd/i)).toBeInTheDocument();
+
+      const deleteButton = screen.getByRole('button', { name: /Delete Bed/i });
+      fireEvent.click(deleteButton);
+
+      expect(onConfirm).toHaveBeenCalledWith({
+        deleteAllPlants: false,
+        destinationBedId: 'bed-2'
+      });
+    });
+
+    it('should calculate total squares needed correctly with multiple plants', () => {
+      // 2 tomatoes @ 1 square each = 2
+      // 1 lettuce @ 0.25 square = 0.25
+      // Total needed: 2.25 squares
+      storage.getBedCapacity.mockReturnValue({
+        total: 10,
+        used: 8,
+        available: 2,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // Should show warning because 2.25 > 2 (overage of 0.25)
+      expect(screen.getByText(/overcrowd/i)).toBeInTheDocument();
+    });
+
+    it('should handle plants with missing quantity field in calculation', () => {
+      storage.getPlantsByBed.mockReturnValue([
+        {
+          id: 'plant-1',
+          plantId: 'tomato',
+          bedId: 'bed-1'
+          // quantity field is missing, should default to 1
+        }
+      ]);
+
+      storage.getBedCapacity.mockReturnValue({
+        total: 10,
+        used: 9.5,
+        available: 0.5,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // 1 tomato needs 1 square, available is 0.5, so should warn
+      expect(screen.getByText(/overcrowd/i)).toBeInTheDocument();
+    });
+
+    it('should handle unknown plants gracefully in calculation', () => {
+      storage.getPlantsByBed.mockReturnValue([
+        {
+          id: 'plant-1',
+          plantId: 'unknown',
+          bedId: 'bed-1',
+          quantity: 5
+        }
+      ]);
+
+      plantLibrary.getPlantById.mockReturnValue(null);
+
+      storage.getBedCapacity.mockReturnValue({
+        total: 10,
+        used: 9.5,
+        available: 0.5,
+        isOvercapacity: false
+      });
+
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+
+      render(<BedDeleteDialog bed={mockBed} onConfirm={onConfirm} onCancel={onCancel} />);
+
+      const dropdown = screen.getByLabelText(/Move plants to:/);
+      fireEvent.change(dropdown, { target: { value: 'bed-2' } });
+
+      // Unknown plants should be ignored in calculation, so no warning
+      expect(screen.queryByText(/overcrowd/i)).not.toBeInTheDocument();
     });
   });
 

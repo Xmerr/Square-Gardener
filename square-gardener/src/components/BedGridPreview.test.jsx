@@ -331,4 +331,230 @@ describe('BedGridPreview', () => {
       expect(container.querySelectorAll('.w-6')).toHaveLength(16);
     });
   });
+
+  describe('large plant visualization', () => {
+    const largePlantLibrary = [
+      ...mockPlantLibrary,
+      { id: 'pumpkin', squaresPerPlant: 2 },
+      { id: 'watermelon', squaresPerPlant: 4 },
+      { id: 'squash', squaresPerPlant: 3 }
+    ];
+
+    it('renders large plant spanning multiple squares', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const largePlantCells = container.querySelectorAll('.border-purple-700');
+      expect(largePlantCells).toHaveLength(2);
+    });
+
+    it('shows "Takes X squares" label on first square of large plant', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 1 }];
+      render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      expect(screen.getByText('2sq')).toBeInTheDocument();
+    });
+
+    it('applies gradient background to large plants', () => {
+      const plants = [{ plantId: 'watermelon', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const gradientCells = container.querySelectorAll('.bg-gradient-to-br');
+      expect(gradientCells).toHaveLength(4);
+    });
+
+    it('adds borders to connect squares of same plant instance', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const borderedCells = container.querySelectorAll('.border-purple-700');
+      expect(borderedCells).toHaveLength(2);
+    });
+
+    it('shows tooltip with square count for large plants', () => {
+      const plants = [{ plantId: 'watermelon', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const largePlantCell = container.querySelector('[title*="Takes"]');
+      expect(largePlantCell).toHaveAttribute('title', 'watermelon (Takes 4 squares)');
+    });
+
+    it('handles multiple large plant instances', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 2 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const labels = container.querySelectorAll('.text-purple-900');
+      expect(labels).toHaveLength(2);
+      expect(screen.getAllByText('2sq')).toHaveLength(2);
+    });
+
+    it('handles large plant with odd square count', () => {
+      const plants = [{ plantId: 'squash', quantity: 1 }];
+      render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      expect(screen.getByText('3sq')).toBeInTheDocument();
+    });
+
+    it('handles mix of regular and large plants', () => {
+      const plants = [
+        { plantId: 'tomato', quantity: 2 },
+        { plantId: 'pumpkin', quantity: 1 },
+        { plantId: 'lettuce', quantity: 4 }
+      ];
+      render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      expect(screen.getAllByText('🍅')).toHaveLength(2);
+      expect(screen.getByText('2sq')).toBeInTheDocument();
+      expect(screen.getByText('🥬')).toBeInTheDocument();
+    });
+
+    it('shows square label instead of emoji for large plant squares', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 1 }];
+      render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      // Large plant should show "2sq" label on first square only
+      expect(screen.getByText('2sq')).toBeInTheDocument();
+      // Should not show emojis for pumpkin
+      expect(screen.queryByText('🌱')).not.toBeInTheDocument();
+    });
+
+    it('applies correct borders for top-left square in grid', () => {
+      const plants = [{ plantId: 'pumpkin', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const borderedCells = container.querySelectorAll('.border-purple-700');
+      const firstCell = borderedCells[0];
+      expect(firstCell).toHaveClass('border-t-2');
+      expect(firstCell).toHaveClass('border-l-2');
+    });
+
+    it('stops filling grid at capacity with large plants', () => {
+      const plants = [{ plantId: 'watermelon', quantity: 10 }];
+      const { container } = render(
+        <BedGridPreview
+          width={4}
+          height={4}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const gridCells = container.querySelectorAll('.rounded-sm');
+      expect(gridCells).toHaveLength(16);
+    });
+
+    it('omits internal borders between connected large plant squares', () => {
+      // Use a 2x2 grid with a 4-square plant to test all internal border removal
+      const plants = [{ plantId: 'watermelon', quantity: 1 }];
+      const { container } = render(
+        <BedGridPreview
+          width={2}
+          height={2}
+          plants={plants}
+          plantLibrary={largePlantLibrary}
+        />
+      );
+
+      const borderedCells = container.querySelectorAll('.border-purple-700');
+      expect(borderedCells).toHaveLength(4);
+
+      // First cell (0,0): top-left corner - has top and left borders, no right or bottom
+      const firstCell = borderedCells[0];
+      expect(firstCell).toHaveClass('border-t-2');
+      expect(firstCell).toHaveClass('border-l-2');
+      expect(firstCell).not.toHaveClass('border-r-2');
+      expect(firstCell).not.toHaveClass('border-b-2');
+
+      // Second cell (0,1): top-right corner - has top and right borders, no left or bottom
+      const secondCell = borderedCells[1];
+      expect(secondCell).toHaveClass('border-t-2');
+      expect(secondCell).toHaveClass('border-r-2');
+      expect(secondCell).not.toHaveClass('border-l-2');
+      expect(secondCell).not.toHaveClass('border-b-2');
+
+      // Third cell (1,0): bottom-left corner - has bottom and left borders, no right or top
+      const thirdCell = borderedCells[2];
+      expect(thirdCell).toHaveClass('border-b-2');
+      expect(thirdCell).toHaveClass('border-l-2');
+      expect(thirdCell).not.toHaveClass('border-r-2');
+      expect(thirdCell).not.toHaveClass('border-t-2');
+
+      // Fourth cell (1,1): bottom-right corner - has bottom and right borders, no left or top
+      const fourthCell = borderedCells[3];
+      expect(fourthCell).toHaveClass('border-b-2');
+      expect(fourthCell).toHaveClass('border-r-2');
+      expect(fourthCell).not.toHaveClass('border-l-2');
+      expect(fourthCell).not.toHaveClass('border-t-2');
+    });
+  });
 });
