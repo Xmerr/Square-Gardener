@@ -516,7 +516,7 @@ describe('MyGarden', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       renderMyGarden();
-      fireEvent.click(screen.getByText('Remove from Garden'));
+      fireEvent.click(screen.getByText('Remove'));
 
       expect(storage.removeGardenPlant).toHaveBeenCalledWith('garden-1');
     });
@@ -525,7 +525,7 @@ describe('MyGarden', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       renderMyGarden();
-      fireEvent.click(screen.getByText('Remove from Garden'));
+      fireEvent.click(screen.getByText('Remove'));
 
       expect(storage.removeGardenPlant).not.toHaveBeenCalled();
     });
@@ -593,6 +593,234 @@ describe('MyGarden', () => {
       storage.getBedCapacity.mockReturnValue(null);
       renderMyGarden();
       expect(screen.getByText('Main Garden')).toBeInTheDocument();
+    });
+  });
+
+  describe('editing plants', () => {
+    const mockGardenPlant = {
+      id: 'garden-1',
+      plantId: 'tomato',
+      bedId: 'bed-1',
+      quantity: 2,
+      variety: 'Roma',
+      plantedDate: '2026-01-15T00:00:00.000Z',
+      lastWatered: '2026-01-15T00:00:00.000Z',
+      notes: '',
+      daysToMaturityOverride: null,
+      spacePerPlantOverride: null,
+      harvestDateOverride: null
+    };
+
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+      storage.getGardenPlants.mockReturnValue([mockGardenPlant]);
+      storage.updateGardenPlant.mockImplementation((id, updates) => ({
+        ...mockGardenPlant,
+        ...updates
+      }));
+      storage.getPlantDefaults.mockReturnValue(null);
+    });
+
+    it('shows edit button on plant cards', () => {
+      renderMyGarden();
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+
+    it('opens edit modal when edit button clicked', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByText('Edit Plant')).toBeInTheDocument();
+    });
+
+    it('shows plant form with pre-populated values in edit mode', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByLabelText('Variety (optional)')).toHaveValue('Roma');
+      expect(screen.getByLabelText('Quantity')).toHaveValue(2);
+    });
+
+    it('closes edit modal when cancel button clicked', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(screen.queryByText('Edit Plant')).not.toBeInTheDocument();
+    });
+
+    it('calls updateGardenPlant when edit form submitted', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, quantity: 3 }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '3' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', expect.objectContaining({
+        quantity: 3
+      }));
+    });
+
+    it('closes edit modal after successful edit', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, quantity: 3 }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '3' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Edit Plant')).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows reset to defaults button in edit modal', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByText('Reset to Default Values')).toBeInTheDocument();
+    });
+
+    it('resets overrides when reset to defaults clicked', () => {
+      const plantWithOverrides = {
+        ...mockGardenPlant,
+        daysToMaturityOverride: 80,
+        spacePerPlantOverride: 1.5,
+        harvestDateOverride: '2026-05-01T00:00:00.000Z'
+      };
+      storage.getGardenPlants.mockReturnValue([plantWithOverrides]);
+      storage.getPlantDefaults.mockReturnValue({ daysToMaturity: 70, squaresPerPlant: 1 });
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Reset to Default Values'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', {
+        daysToMaturityOverride: null,
+        spacePerPlantOverride: null,
+        harvestDateOverride: null
+      });
+    });
+
+    it('updates edit form state after reset', async () => {
+      const plantWithOverrides = {
+        ...mockGardenPlant,
+        daysToMaturityOverride: 80
+      };
+      storage.getGardenPlants
+        .mockReturnValueOnce([plantWithOverrides])
+        .mockReturnValueOnce([{ ...plantWithOverrides, daysToMaturityOverride: null }]);
+      storage.getPlantDefaults.mockReturnValue(null);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Reset to Default Values'));
+
+      // After reset, the form should reflect cleared overrides
+      expect(storage.updateGardenPlant).toHaveBeenCalled();
+    });
+
+    it('allows editing plant bed assignment', async () => {
+      const secondBed = { ...mockBed, id: 'bed-2', name: 'Second Bed' };
+      storage.getGardenBeds.mockReturnValue([mockBed, secondBed]);
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, bedId: 'bed-2' }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.change(screen.getByLabelText('Bed'), { target: { value: 'bed-2' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', expect.objectContaining({
+        bedId: 'bed-2'
+      }));
+    });
+
+    it('allows editing variety', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, variety: 'Cherry' }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.change(screen.getByLabelText('Variety (optional)'), { target: { value: 'Cherry' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', expect.objectContaining({
+        variety: 'Cherry'
+      }));
+    });
+
+    it('allows editing plant date', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, plantedDate: '2026-02-01T00:00:00.000Z' }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.change(screen.getByLabelText('Plant Date'), { target: { value: '2026-02-01' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', expect.objectContaining({
+        plantedDate: expect.stringContaining('2026-02-01')
+      }));
+    });
+
+    it('allows editing overrides', async () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([mockGardenPlant])
+        .mockReturnValueOnce([{ ...mockGardenPlant, daysToMaturityOverride: 60 }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Advanced Options'));
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '60' } });
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalledWith('garden-1', expect.objectContaining({
+        daysToMaturityOverride: 60
+      }));
+    });
+  });
+
+  describe('editing unassigned plants', () => {
+    const unassignedPlant = {
+      id: 'garden-unassigned',
+      plantId: 'tomato',
+      quantity: 1,
+      plantedDate: new Date().toISOString(),
+      lastWatered: new Date().toISOString(),
+      notes: ''
+      // no bedId
+    };
+
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([mockBed]);
+      storage.getGardenPlants.mockReturnValue([unassignedPlant]);
+      storage.updateGardenPlant.mockImplementation((id, updates) => ({
+        ...unassignedPlant,
+        ...updates
+      }));
+    });
+
+    it('shows edit button on unassigned plant cards', () => {
+      renderMyGarden();
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+
+    it('can edit unassigned plants', () => {
+      storage.getGardenPlants
+        .mockReturnValueOnce([unassignedPlant])
+        .mockReturnValueOnce([{ ...unassignedPlant, bedId: 'bed-1' }]);
+
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Save Changes'));
+
+      expect(storage.updateGardenPlant).toHaveBeenCalled();
     });
   });
 });

@@ -188,7 +188,7 @@ describe('PlantCard', () => {
           showAddButton={false}
         />
       );
-      expect(screen.getByText('Remove from Garden')).toBeInTheDocument();
+      expect(screen.getByText('Remove')).toBeInTheDocument();
     });
 
     it('calls onRemove with garden plant id when clicked', () => {
@@ -201,14 +201,82 @@ describe('PlantCard', () => {
           showAddButton={false}
         />
       );
-      fireEvent.click(screen.getByText('Remove from Garden'));
+      fireEvent.click(screen.getByText('Remove'));
       expect(onRemove).toHaveBeenCalledWith('garden-123');
     });
 
     it('does not show remove button without gardenPlant', () => {
       const onRemove = vi.fn();
       render(<PlantCard plant={mockPlant} onRemove={onRemove} showAddButton={false} />);
-      expect(screen.queryByText('Remove from Garden')).not.toBeInTheDocument();
+      expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('edit button', () => {
+    it('shows edit button when gardenPlant and onEdit provided', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+    });
+
+    it('calls onEdit with gardenPlant when clicked', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      fireEvent.click(screen.getByText('Edit'));
+      expect(onEdit).toHaveBeenCalledWith(mockGardenPlant);
+    });
+
+    it('does not show edit button without onEdit prop', () => {
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          showAddButton={false}
+        />
+      );
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    });
+
+    it('does not show edit button without gardenPlant', () => {
+      const onEdit = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          onEdit={onEdit}
+          showAddButton={false}
+        />
+      );
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    });
+
+    it('shows both edit and remove buttons when both handlers provided', () => {
+      const onEdit = vi.fn();
+      const onRemove = vi.fn();
+      render(
+        <PlantCard
+          plant={mockPlant}
+          gardenPlant={mockGardenPlant}
+          onEdit={onEdit}
+          onRemove={onRemove}
+          showAddButton={false}
+        />
+      );
+      expect(screen.getByText('Edit')).toBeInTheDocument();
+      expect(screen.getByText('Remove')).toBeInTheDocument();
     });
   });
 

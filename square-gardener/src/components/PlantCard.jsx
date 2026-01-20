@@ -5,7 +5,7 @@ import {
   getDaysUntilHarvest
 } from '../utils/harvestDate';
 
-function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false }) {
+function PlantCard({ plant, gardenPlant, onAdd, onRemove, onEdit, showAddButton = false }) {
   const getSunIcon = (requirement) => {
     switch (requirement) {
       case 'full':
@@ -99,7 +99,7 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
         )}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 space-y-2">
         {showAddButton && onAdd && (
           <button
             onClick={() => onAdd(plant.id)}
@@ -109,13 +109,25 @@ function PlantCard({ plant, gardenPlant, onAdd, onRemove, showAddButton = false 
           </button>
         )}
 
-        {!showAddButton && onRemove && gardenPlant && (
-          <button
-            onClick={() => onRemove(gardenPlant.id)}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded transition-colors"
-          >
-            Remove from Garden
-          </button>
+        {!showAddButton && gardenPlant && (
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(gardenPlant)}
+                className="flex-1 bg-primary hover:bg-primary-light text-white font-medium py-2 px-4 rounded transition-colors"
+              >
+                Edit
+              </button>
+            )}
+            {onRemove && (
+              <button
+                onClick={() => onRemove(gardenPlant.id)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -156,6 +168,7 @@ PlantCard.propTypes = {
   }),
   onAdd: PropTypes.func,
   onRemove: PropTypes.func,
+  onEdit: PropTypes.func,
   showAddButton: PropTypes.bool
 };
 
