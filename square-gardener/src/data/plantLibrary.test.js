@@ -122,4 +122,82 @@ describe('plantLibrary', () => {
       expect(arePlantsCompatible('basil', 'sage')).toBe(false);
     });
   });
+
+  describe('Houseplant additions', () => {
+    describe('Aloe', () => {
+      it('exists in plant library', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe).toBeDefined();
+      });
+
+      it('has correct name', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe.name).toBe('Aloe');
+      });
+
+      it('has correct squaresPerPlant value', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe.squaresPerPlant).toBe(0.25);
+      });
+
+      it('has correct scientific name', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe.scientificName).toBe('Aloe vera');
+      });
+
+      it('has no companion plants', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe.companionPlants).toEqual([]);
+      });
+
+      it('has no avoid plants', () => {
+        const aloe = getPlantById('aloe');
+        expect(aloe.avoidPlants).toEqual([]);
+      });
+
+      it('is compatible with all plants', () => {
+        expect(arePlantsCompatible('aloe', 'tomato')).toBe(true);
+        expect(arePlantsCompatible('aloe', 'basil')).toBe(true);
+        expect(arePlantsCompatible('tomato', 'aloe')).toBe(true);
+      });
+    });
+
+    describe('Calathea', () => {
+      it('exists in plant library', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea).toBeDefined();
+      });
+
+      it('has correct name', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea.name).toBe('Calathea');
+      });
+
+      it('has correct squaresPerPlant value', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea.squaresPerPlant).toBe(0.25);
+      });
+
+      it('has correct scientific name', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea.scientificName).toBe('Calathea spp.');
+      });
+
+      it('has no companion plants', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea.companionPlants).toEqual([]);
+      });
+
+      it('has no avoid plants', () => {
+        const calathea = getPlantById('calathea');
+        expect(calathea.avoidPlants).toEqual([]);
+      });
+
+      it('is compatible with all plants', () => {
+        expect(arePlantsCompatible('calathea', 'tomato')).toBe(true);
+        expect(arePlantsCompatible('calathea', 'basil')).toBe(true);
+        expect(arePlantsCompatible('tomato', 'calathea')).toBe(true);
+      });
+    });
+  });
 });

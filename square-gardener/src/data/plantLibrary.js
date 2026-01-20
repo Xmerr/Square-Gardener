@@ -363,6 +363,30 @@ export const plantLibrary = [
     sunRequirement: 'full',
     companionPlants: ['carrot', 'strawberry', 'tomato'],
     avoidPlants: ['cucumber', 'onion']
+  },
+  {
+    id: 'aloe',
+    name: 'Aloe',
+    scientificName: 'Aloe vera',
+    wateringFrequency: 7,
+    squaresPerPlant: 0.25, // 4 plants per square
+    daysToMaturity: 365, // perennial
+    plantingSeason: ['spring', 'summer', 'fall'],
+    sunRequirement: 'full',
+    companionPlants: [],
+    avoidPlants: []
+  },
+  {
+    id: 'calathea',
+    name: 'Calathea',
+    scientificName: 'Calathea spp.',
+    wateringFrequency: 3,
+    squaresPerPlant: 0.25, // 4 plants per square
+    daysToMaturity: 365, // perennial
+    plantingSeason: ['spring', 'summer', 'fall'],
+    sunRequirement: 'partial',
+    companionPlants: [],
+    avoidPlants: []
   }
 ];
 

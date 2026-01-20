@@ -2,7 +2,7 @@
 
 This document tracks the implementation status of all feature specifications.
 
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-20
 
 ---
 
@@ -25,7 +25,7 @@ This document tracks the implementation status of all feature specifications.
 | [mobile-responsiveness-and-testing-spec.md](./mobile-responsiveness-and-testing-spec.md) | :white_check_mark: Complete | Tailwind CSS, Vitest, 100% coverage, CI/CD gates |
 | [bed-management-feature-spec.md](./bed-management-feature-spec.md) | :hourglass: Partial | Core functionality complete (Phases 1-4), pending: drag-drop reorder, BedDeleteDialog |
 | [enhanced-plant-properties-spec.md](./enhanced-plant-properties-spec.md) | :x: Not Started | No schema changes, no UI components |
-| [indoor-plants-and-pots-spec.md](./indoor-plants-and-pots-spec.md) | :x: Not Started | No houseplants in library, no pot support |
+| [indoor-plants-and-pots-spec.md](./indoor-plants-and-pots-spec.md) | :hourglass: Partial | Pot infrastructure complete (FR2), houseplants pending (FR1) |
 | [planning-mode-spec.md](./planning-mode-spec.md) | :clipboard: Placeholder | Route exists, Planner.jsx shows "Coming Soon" |
 
 ---
@@ -89,17 +89,30 @@ This document tracks the implementation status of all feature specifications.
 
 ---
 
-### Indoor Plants & Pots (Not Started)
+### Indoor Plants & Pots (Partial)
 
-**Not Implemented**:
-- [ ] `is_pot` field on locations
-- [ ] `size` field for pots (small/medium/large/extra_large)
-- [ ] POT_SIZES constant with capacity mappings
+**Implemented (FR2: Pot Creation)**:
+- [x] `is_pot` field on locations (beds)
+- [x] `size` field for pots (small/medium/large/extra_large)
+- [x] POT_SIZES constant with capacity mappings (4 sizes with labels, capacity, diameter)
+- [x] getPotCapacity() utility function
+- [x] Automatic migration for existing beds (adds is_pot: false)
+- [x] Pot creation UI (checkbox toggle in BedForm)
+- [x] Size selector dropdown showing labels with diameters
+- [x] Capacity display for pots vs area for beds
+- [x] BedCard displays pots correctly
+- [x] Storage functions handle pots (addGardenBed, getBedCapacity)
+- [x] Full test coverage (100% coverage maintained)
+
+**Not Implemented (FR1: Houseplants)**:
 - [ ] Aloe plant in library
 - [ ] Calathea plant in library
-- [ ] Pot creation UI (checkbox toggle)
-- [ ] Pot display variant in location cards
-- [ ] Pot icon distinction from beds
+- [ ] Other houseplants (Snake Plant, Pothos, Spider Plant)
+- [ ] Houseplant-specific properties (indirect light, low water frequency)
+
+**Not Implemented (Nice-to-have)**:
+- [ ] Pot icon distinction from beds in UI
+- [ ] Visual pot representation in grid views
 
 ---
 
@@ -141,5 +154,6 @@ Based on dependencies between specs:
 
 | Date | Change |
 |------|--------|
+| 2026-01-20 | Indoor Plants & Pots: FR2 (Pot Creation) complete - POT_SIZES, is_pot, size field, UI, tests |
 | 2026-01-18 | Bed Management: Implemented Phases 1-4 (storage, components, integration) |
 | 2026-01-18 | Initial status document created |
