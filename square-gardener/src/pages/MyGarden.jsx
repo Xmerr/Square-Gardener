@@ -12,10 +12,8 @@ import {
   updateGardenPlant,
   getGardenBeds,
   getBedCapacity,
-  addGardenBed,
-  getPlantDefaults
+  addGardenBed
 } from '../utils/storage';
-import { calculateHarvestDate } from '../utils/harvestDate';
 
 function MyGarden() {
   const [gardenPlants, setGardenPlants] = useState(() => getGardenPlants());
@@ -95,11 +93,6 @@ function MyGarden() {
   };
 
   const handleResetToDefaults = () => {
-    // Note: This function is only called from within the edit modal,
-    // where editingPlant is guaranteed to be set
-    const plantDefaults = getPlantDefaults(editingPlant.plantId);
-    const libraryPlant = getPlantById(editingPlant.plantId);
-
     // Reset to defaults: clear all overrides
     const updates = {
       daysToMaturityOverride: null,
