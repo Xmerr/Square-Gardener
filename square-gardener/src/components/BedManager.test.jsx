@@ -200,7 +200,8 @@ describe('BedManager', () => {
       storage.getGardenBeds.mockReturnValue(mockBeds);
     });
 
-    it('deletes bed when confirmed', () => {
+    it('deletes empty bed directly without dialog', () => {
+      storage.getPlantsByBed.mockReturnValue([]);
       storage.removeGardenBed.mockReturnValue(true);
 
       render(<BedManager onBedChange={mockOnBedChange} />);
@@ -209,6 +210,76 @@ describe('BedManager', () => {
 
       expect(storage.removeGardenBed).toHaveBeenCalledWith('bed-1');
       expect(mockOnBedChange).toHaveBeenCalled();
+    });
+
+    it('shows delete dialog when bed has plants', () => {
+      const mockPlants = [{ id: 'plant-1', plantId: 'tomato' }];
+      storage.getPlantsByBed.mockImplementation((bedId) => {
+        if (bedId === 'bed-1') return mockPlants;
+        return [];
+      });
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Delete Main Garden'));
+
+      // Dialog shows - use heading role for uniqueness
+      expect(screen.getByRole('heading', { name: 'Delete Bed' })).toBeInTheDocument();
+      // Dialog mentions the plant count
+      expect(screen.getByText(/contains 1 plant/)).toBeInTheDocument();
+    });
+
+    it('deletes bed with plants when dialog confirmed with deleteAllPlants', () => {
+      const mockPlants = [{ id: 'plant-1', plantId: 'tomato' }];
+      storage.getPlantsByBed.mockImplementation((bedId) => {
+        if (bedId === 'bed-1') return mockPlants;
+        return [];
+      });
+      storage.removeGardenBed.mockReturnValue(true);
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Delete Main Garden'));
+      fireEvent.click(screen.getByLabelText(/Delete all plants/));
+      fireEvent.click(screen.getByRole('button', { name: /Delete Bed/i }));
+
+      expect(storage.removeGardenBed).toHaveBeenCalledWith('bed-1', { deleteAllPlants: true, destinationBedId: null });
+      expect(mockOnBedChange).toHaveBeenCalled();
+    });
+
+    it('closes delete dialog when cancelled', () => {
+      const mockPlants = [{ id: 'plant-1', plantId: 'tomato' }];
+      storage.getPlantsByBed.mockImplementation((bedId) => {
+        if (bedId === 'bed-1') return mockPlants;
+        return [];
+      });
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Delete Main Garden'));
+      // Check the dialog is open by looking for the modal heading
+      expect(screen.getByRole('heading', { name: 'Delete Bed' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+      // Dialog should be closed
+      expect(screen.queryByRole('heading', { name: 'Delete Bed' })).not.toBeInTheDocument();
+    });
+
+    it('shows error when delete fails via dialog', () => {
+      const mockPlants = [{ id: 'plant-1', plantId: 'tomato' }];
+      storage.getPlantsByBed.mockImplementation((bedId) => {
+        if (bedId === 'bed-1') return mockPlants;
+        return [];
+      });
+      storage.removeGardenBed.mockReturnValue(false);
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Delete Main Garden'));
+      fireEvent.click(screen.getByLabelText(/Delete all plants/));
+      fireEvent.click(screen.getByRole('button', { name: /Delete Bed/i }));
+
+      expect(screen.getByText(/Failed to delete bed/)).toBeInTheDocument();
     });
 
     it('shows error when cannot delete last bed with plants', () => {
