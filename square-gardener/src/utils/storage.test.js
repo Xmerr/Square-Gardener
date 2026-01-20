@@ -562,6 +562,71 @@ describe('storage utilities', () => {
       expect(result).toBe(false);
       expect(getGardenBeds()).toHaveLength(1);
     });
+
+    it('deletes plants when deleteAllPlants option is true', () => {
+      const bed1 = addGardenBed('Bed 1', 4, 4);
+      addGardenBed('Bed 2', 4, 4);
+      addGardenPlant('tomato', bed1.id);
+      addGardenPlant('lettuce', bed1.id);
+
+      const result = removeGardenBed(bed1.id, { deleteAllPlants: true });
+
+      expect(result).toBe(true);
+      expect(getGardenBeds()).toHaveLength(1);
+      expect(getGardenPlants()).toHaveLength(0);
+    });
+
+    it('reassigns plants to destination bed when destinationBedId is provided', () => {
+      const bed1 = addGardenBed('Bed 1', 4, 4);
+      const bed2 = addGardenBed('Bed 2', 4, 4);
+      addGardenPlant('tomato', bed1.id);
+      addGardenPlant('lettuce', bed1.id);
+
+      const result = removeGardenBed(bed1.id, { destinationBedId: bed2.id });
+
+      expect(result).toBe(true);
+      expect(getGardenBeds()).toHaveLength(1);
+      const plants = getGardenPlants();
+      expect(plants).toHaveLength(2);
+      expect(plants.every(p => p.bedId === bed2.id)).toBe(true);
+    });
+
+    it('prevents deletion of last bed with plants when no options provided', () => {
+      const bed = addGardenBed('Only Bed', 4, 4);
+      addGardenPlant('tomato', bed.id);
+
+      const result = removeGardenBed(bed.id);
+
+      expect(result).toBe(false);
+      expect(getGardenBeds()).toHaveLength(1);
+      expect(getGardenPlants()).toHaveLength(1);
+    });
+
+    it('allows deletion of last bed with plants when deleteAllPlants is true', () => {
+      const bed = addGardenBed('Only Bed', 4, 4);
+      addGardenPlant('tomato', bed.id);
+
+      const result = removeGardenBed(bed.id, { deleteAllPlants: true });
+
+      expect(result).toBe(true);
+      expect(getGardenBeds()).toHaveLength(0);
+      expect(getGardenPlants()).toHaveLength(0);
+    });
+
+    it('preserves plants in other beds when reassigning', () => {
+      const bed1 = addGardenBed('Bed 1', 4, 4);
+      const bed2 = addGardenBed('Bed 2', 4, 4);
+      addGardenPlant('tomato', bed1.id);
+      addGardenPlant('lettuce', bed2.id);
+
+      const result = removeGardenBed(bed1.id, { destinationBedId: bed2.id });
+
+      expect(result).toBe(true);
+      const plants = getGardenPlants();
+      expect(plants).toHaveLength(2);
+      // Both plants should be in bed2 now - the reassigned one and the one that was already there
+      expect(plants.filter(p => p.bedId === bed2.id)).toHaveLength(2);
+    });
   });
 
   describe('reorderBeds', () => {

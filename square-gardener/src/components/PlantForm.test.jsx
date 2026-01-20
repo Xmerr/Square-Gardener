@@ -158,7 +158,7 @@ describe('PlantForm', () => {
       );
       fireEvent.click(screen.getByText('Advanced Options'));
       expect(screen.getByLabelText('Days to Maturity Override')).toHaveValue(65);
-      expect(screen.getByLabelText('Space per Plant Override (sq ft)')).toHaveValue(1.5);
+      expect(screen.getByLabelText('Squares per Plant Override')).toHaveValue(1.5);
     });
   });
 
@@ -173,7 +173,7 @@ describe('PlantForm', () => {
 
       fireEvent.click(screen.getByText('Advanced Options'));
       expect(screen.getByLabelText('Days to Maturity Override')).toBeInTheDocument();
-      expect(screen.getByLabelText('Space per Plant Override (sq ft)')).toBeInTheDocument();
+      expect(screen.getByLabelText('Squares per Plant Override')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Advanced Options'));
       expect(screen.queryByLabelText('Days to Maturity Override')).not.toBeInTheDocument();
@@ -198,7 +198,7 @@ describe('PlantForm', () => {
       fireEvent.click(screen.getByText('Advanced Options'));
 
       expect(screen.getByLabelText('Days to Maturity Override')).toHaveAttribute('placeholder', '70 (library default)');
-      expect(screen.getByLabelText('Space per Plant Override (sq ft)')).toHaveAttribute('placeholder', '1 (library default)');
+      expect(screen.getByLabelText('Squares per Plant Override')).toHaveAttribute('placeholder', '1 (library default)');
     });
 
     it('shows garden default as placeholder when set', () => {
@@ -210,7 +210,7 @@ describe('PlantForm', () => {
       fireEvent.click(screen.getByText('Advanced Options'));
 
       expect(screen.getByLabelText('Days to Maturity Override')).toHaveAttribute('placeholder', '60 (garden default)');
-      expect(screen.getByLabelText('Space per Plant Override (sq ft)')).toHaveAttribute('placeholder', '0.5 (garden default)');
+      expect(screen.getByLabelText('Squares per Plant Override')).toHaveAttribute('placeholder', '0.5 (garden default)');
     });
 
     it('shows effective value text when no override entered', () => {
@@ -414,7 +414,7 @@ describe('PlantForm', () => {
 
       fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
       fireEvent.click(screen.getByText('Advanced Options'));
-      const spaceInput = screen.getByLabelText('Space per Plant Override (sq ft)');
+      const spaceInput = screen.getByLabelText('Squares per Plant Override');
       fireEvent.input(spaceInput, { target: { value: '0' } });
       fireEvent.change(spaceInput, { target: { value: '0' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
@@ -428,7 +428,7 @@ describe('PlantForm', () => {
 
       fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
       fireEvent.click(screen.getByText('Advanced Options'));
-      fireEvent.change(screen.getByLabelText('Space per Plant Override (sq ft)'), { target: { value: '0.5' } });
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '0.5' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
 
       expect(mockOnSubmit).toHaveBeenCalledWith(expect.objectContaining({
@@ -474,7 +474,7 @@ describe('PlantForm', () => {
       fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
       fireEvent.click(screen.getByText('Advanced Options'));
       fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '55' } });
-      fireEvent.change(screen.getByLabelText('Space per Plant Override (sq ft)'), { target: { value: '0.75' } });
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '0.75' } });
       fireEvent.click(screen.getByText('Add Plant', { selector: 'button[type="submit"]' }));
 
       expect(mockOnSubmit).toHaveBeenCalledWith(expect.objectContaining({
@@ -667,7 +667,7 @@ describe('PlantForm', () => {
       fireEvent.click(screen.getByText('Advanced Options'));
 
       expect(screen.getByLabelText('Days to Maturity Override')).toHaveAttribute('placeholder', '');
-      expect(screen.getByLabelText('Space per Plant Override (sq ft)')).toHaveAttribute('placeholder', '');
+      expect(screen.getByLabelText('Squares per Plant Override')).toHaveAttribute('placeholder', '');
     });
 
     it('handles null garden defaults gracefully', () => {

@@ -249,15 +249,36 @@ export const updateGardenBed = (bedId, updates) => {
 /**
  * Remove a garden bed
  * Returns false if it's the last bed and plants exist in garden
+ * @param {string} bedId - ID of the bed to remove
+ * @param {Object} options - Optional settings for plant handling
+ * @param {boolean} options.deleteAllPlants - If true, delete all plants in the bed
+ * @param {string} options.destinationBedId - If provided, reassign plants to this bed
  */
-export const removeGardenBed = (bedId) => {
+export const removeGardenBed = (bedId, options = {}) => {
   const beds = getGardenBeds();
   const plants = getGardenPlants();
-  const plantsInGarden = plants.length > 0;
+  const plantsInBed = plants.filter(p => p.bedId === bedId);
   const isLastBed = beds.length === 1;
 
-  if (isLastBed && plantsInGarden) {
-    return false;
+  // Handle plants in the bed being deleted
+  if (plantsInBed.length > 0) {
+    if (options.deleteAllPlants) {
+      // Remove all plants in this bed
+      const remainingPlants = plants.filter(p => p.bedId !== bedId);
+      saveGardenPlants(remainingPlants);
+    } else if (options.destinationBedId) {
+      // Reassign plants to destination bed
+      const updatedPlants = plants.map(p => {
+        if (p.bedId === bedId) {
+          return { ...p, bedId: options.destinationBedId };
+        }
+        return p;
+      });
+      saveGardenPlants(updatedPlants);
+    } else if (isLastBed) {
+      // Can't delete last bed with plants without specifying what to do with them
+      return false;
+    }
   }
 
   const filtered = beds.filter(bed => bed.id !== bedId);

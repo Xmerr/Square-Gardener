@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import BedCard from './BedCard';
 import BedForm from './BedForm';
+import BedDeleteDialog from './BedDeleteDialog';
 import {
   getGardenBeds,
   addGardenBed,
@@ -15,6 +16,7 @@ function BedManager({ onBedChange }) {
   const [beds, setBeds] = useState(() => getGardenBeds());
   const [showForm, setShowForm] = useState(false);
   const [editingBed, setEditingBed] = useState(null);
+  const [deletingBed, setDeletingBed] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
 
   const capacities = useMemo(() => {
@@ -61,13 +63,36 @@ function BedManager({ onBedChange }) {
 
   const handleDeleteBed = (bed) => {
     setDeleteError(null);
-    const success = removeGardenBed(bed.id);
+    const plants = getPlantsByBed(bed.id);
+    if (plants.length > 0) {
+      // Show delete dialog for beds with plants
+      setDeletingBed(bed);
+    } else {
+      // Direct delete for empty beds
+      const success = removeGardenBed(bed.id);
+      if (success) {
+        loadBeds();
+        onBedChange?.();
+      } else {
+        setDeleteError('Cannot delete the last bed while plants exist. Please remove plants first or create another bed.');
+      }
+    }
+  };
+
+  const handleConfirmDelete = (options) => {
+    const success = removeGardenBed(deletingBed.id, options);
     if (success) {
       loadBeds();
       onBedChange?.();
+      setDeletingBed(null);
     } else {
-      setDeleteError('Cannot delete the last bed while plants exist. Please remove plants first or create another bed.');
+      setDeleteError('Failed to delete bed. Please try again.');
+      setDeletingBed(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeletingBed(null);
   };
 
   const handleEdit = (bed) => {
@@ -150,6 +175,14 @@ function BedManager({ onBedChange }) {
             />
           ))}
         </div>
+      )}
+
+      {deletingBed && (
+        <BedDeleteDialog
+          bed={deletingBed}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
       )}
     </div>
   );

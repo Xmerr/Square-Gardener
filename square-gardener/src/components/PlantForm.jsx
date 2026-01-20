@@ -119,15 +119,15 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
 
     if (daysToMaturityOverride) {
       const daysNum = parseInt(daysToMaturityOverride, 10);
-      if (isNaN(daysNum) || daysNum <= 0) {
-        newErrors.daysToMaturityOverride = 'Must be a positive number';
+      if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
+        newErrors.daysToMaturityOverride = 'Must be between 1 and 365 days';
       }
     }
 
     if (spacePerPlantOverride) {
       const spaceNum = parseFloat(spacePerPlantOverride);
-      if (isNaN(spaceNum) || spaceNum <= 0) {
-        newErrors.spacePerPlantOverride = 'Must be a positive number';
+      if (isNaN(spaceNum) || spaceNum < 0.01 || spaceNum > 10) {
+        newErrors.spacePerPlantOverride = 'Must be between 0.01 and 10';
       }
     }
 
@@ -319,6 +319,7 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
               id="days-to-maturity"
               type="number"
               min="1"
+              max="365"
               value={daysToMaturityOverride}
               onChange={(e) => setDaysToMaturityOverride(e.target.value)}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -337,13 +338,14 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
           </div>
 
           <div>
-            <label htmlFor="space-per-plant" className="block text-sm font-medium text-gray-700 mb-1">
-              Space per Plant Override (sq ft)
+            <label htmlFor="squares-per-plant" className="block text-sm font-medium text-gray-700 mb-1">
+              Squares per Plant Override
             </label>
             <input
-              id="space-per-plant"
+              id="squares-per-plant"
               type="number"
               min="0.01"
+              max="10"
               step="0.01"
               value={spacePerPlantOverride}
               onChange={(e) => setSpacePerPlantOverride(e.target.value)}
