@@ -33,12 +33,28 @@ describe('FrostDateForm', () => {
 
       expect(screen.getByText('Frost Date Settings')).toBeInTheDocument();
       expect(screen.getByLabelText('ZIP Code (optional)')).toBeInTheDocument();
-      expect(screen.getByLabelText('Last Spring Frost')).toBeInTheDocument();
-      expect(screen.getByLabelText('First Fall Frost')).toBeInTheDocument();
+      expect(screen.getByText('Last Spring Frost')).toBeInTheDocument();
+      expect(screen.getByText('First Fall Frost')).toBeInTheDocument();
       expect(screen.getByText('Save Frost Dates')).toBeInTheDocument();
     });
 
-    it('should load existing frost dates on mount', () => {
+    it('should load existing frost dates on mount with MM-DD format', () => {
+      frostDateStorage.getFrostDates.mockReturnValue({
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
+        zipCode: '12345'
+      });
+
+      render(<FrostDateForm />);
+
+      expect(screen.getByDisplayValue('April')).toBeInTheDocument();
+      const daySelects = screen.getAllByDisplayValue('15');
+      expect(daySelects).toHaveLength(2);
+      expect(screen.getByDisplayValue('October')).toBeInTheDocument();
+      expect(screen.getByLabelText('ZIP Code (optional)')).toHaveValue('12345');
+    });
+
+    it('should convert YYYY-MM-DD format to MM-DD for backward compatibility', () => {
       frostDateStorage.getFrostDates.mockReturnValue({
         lastSpringFrost: '2024-04-15',
         firstFallFrost: '2024-10-15',
@@ -47,21 +63,24 @@ describe('FrostDateForm', () => {
 
       render(<FrostDateForm />);
 
-      expect(screen.getByLabelText('Last Spring Frost')).toHaveValue('2024-04-15');
-      expect(screen.getByLabelText('First Fall Frost')).toHaveValue('2024-10-15');
-      expect(screen.getByLabelText('ZIP Code (optional)')).toHaveValue('12345');
+      expect(screen.getByDisplayValue('April')).toBeInTheDocument();
+      const daySelects = screen.getAllByDisplayValue('15');
+      expect(daySelects).toHaveLength(2);
+      expect(screen.getByDisplayValue('October')).toBeInTheDocument();
     });
 
     it('should display current frost dates when set', () => {
       frostDateStorage.getFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: null
       });
 
       render(<FrostDateForm />);
 
       expect(screen.getByText('Current frost dates:')).toBeInTheDocument();
+      expect(screen.getByText(/April 15/)).toBeInTheDocument();
+      expect(screen.getByText(/October 15/)).toBeInTheDocument();
     });
 
     it('should not display current dates message when dates are not set', () => {
@@ -72,6 +91,22 @@ describe('FrostDateForm', () => {
 
     it('should use initialFrostDates prop when provided', () => {
       const initialDates = {
+        lastSpringFrost: '05-01',
+        firstFallFrost: '09-30',
+        zipCode: '54321'
+      };
+
+      render(<FrostDateForm initialFrostDates={initialDates} />);
+
+      expect(screen.getByDisplayValue('May')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('1')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('September')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('30')).toBeInTheDocument();
+      expect(screen.getByLabelText('ZIP Code (optional)')).toHaveValue('54321');
+    });
+
+    it('should handle initialFrostDates with YYYY-MM-DD format', () => {
+      const initialDates = {
         lastSpringFrost: '2024-05-01',
         firstFallFrost: '2024-09-30',
         zipCode: '54321'
@@ -79,9 +114,10 @@ describe('FrostDateForm', () => {
 
       render(<FrostDateForm initialFrostDates={initialDates} />);
 
-      expect(screen.getByLabelText('Last Spring Frost')).toHaveValue('2024-05-01');
-      expect(screen.getByLabelText('First Fall Frost')).toHaveValue('2024-09-30');
-      expect(screen.getByLabelText('ZIP Code (optional)')).toHaveValue('54321');
+      expect(screen.getByDisplayValue('May')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('1')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('September')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('30')).toBeInTheDocument();
     });
   });
 
@@ -106,8 +142,8 @@ describe('FrostDateForm', () => {
 
     it('should fill dates when ZIP lookup succeeds', () => {
       frostDateLookup.lookupFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
       frostDateLookup.isZipCodeSupported.mockReturnValue(true);
 
@@ -117,8 +153,9 @@ describe('FrostDateForm', () => {
       fireEvent.change(zipInput, { target: { value: '10001' } });
       fireEvent.click(screen.getByText('Look Up'));
 
-      expect(screen.getByLabelText('Last Spring Frost')).toHaveValue('2024-04-15');
-      expect(screen.getByLabelText('First Fall Frost')).toHaveValue('2024-10-15');
+      expect(screen.getByDisplayValue('April')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('15')[0]).toBeInTheDocument();
+      expect(screen.getByDisplayValue('October')).toBeInTheDocument();
       expect(screen.getByText('Frost dates found for your area!')).toBeInTheDocument();
     });
 
@@ -140,8 +177,11 @@ describe('FrostDateForm', () => {
     it('should show error when spring frost date is missing', () => {
       render(<FrostDateForm />);
 
-      const fallInput = screen.getByLabelText('First Fall Frost');
-      fireEvent.change(fallInput, { target: { value: '2024-10-15' } });
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(screen.getByText('Last spring frost date is required')).toBeInTheDocument();
@@ -150,8 +190,11 @@ describe('FrostDateForm', () => {
     it('should show error when fall frost date is missing', () => {
       render(<FrostDateForm />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      fireEvent.change(springInput, { target: { value: '2024-04-15' } });
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(screen.getByText('First fall frost date is required')).toBeInTheDocument();
@@ -160,11 +203,15 @@ describe('FrostDateForm', () => {
     it('should show error when fall frost is before spring frost', () => {
       render(<FrostDateForm />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      const fallInput = screen.getByLabelText('First Fall Frost');
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
-      fireEvent.change(springInput, { target: { value: '2024-10-15' } });
-      fireEvent.change(fallInput, { target: { value: '2024-04-15' } });
+      fireEvent.change(springMonthSelect, { target: { value: '10' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '04' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
@@ -173,14 +220,48 @@ describe('FrostDateForm', () => {
     it('should show error when dates are the same', () => {
       render(<FrostDateForm />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      const fallInput = screen.getByLabelText('First Fall Frost');
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
-      fireEvent.change(springInput, { target: { value: '2024-06-15' } });
-      fireEvent.change(fallInput, { target: { value: '2024-06-15' } });
+      fireEvent.change(springMonthSelect, { target: { value: '06' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '06' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
+    });
+  });
+
+  describe('validation edge cases', () => {
+    it('should show error for invalid spring frost date format', () => {
+      const initialDates = {
+        lastSpringFrost: 'invalid',
+        firstFallFrost: '10-15',
+        zipCode: null
+      };
+
+      render(<FrostDateForm initialFrostDates={initialDates} />);
+
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Invalid date format')).toBeInTheDocument();
+    });
+
+    it('should show error for invalid fall frost date format', () => {
+      const initialDates = {
+        lastSpringFrost: '04-15',
+        firstFallFrost: 'invalid',
+        zipCode: null
+      };
+
+      render(<FrostDateForm initialFrostDates={initialDates} />);
+
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Invalid date format')).toBeInTheDocument();
     });
   });
 
@@ -189,21 +270,25 @@ describe('FrostDateForm', () => {
       const onSave = vi.fn();
       render(<FrostDateForm onSave={onSave} />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      const fallInput = screen.getByLabelText('First Fall Frost');
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
-      fireEvent.change(springInput, { target: { value: '2024-04-15' } });
-      fireEvent.change(fallInput, { target: { value: '2024-10-15' } });
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(frostDateStorage.saveFrostDates).toHaveBeenCalledWith({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: null
       });
       expect(onSave).toHaveBeenCalledWith({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: null
       });
     });
@@ -213,17 +298,21 @@ describe('FrostDateForm', () => {
       render(<FrostDateForm onSave={onSave} />);
 
       const zipInput = screen.getByLabelText('ZIP Code (optional)');
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      const fallInput = screen.getByLabelText('First Fall Frost');
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
       fireEvent.change(zipInput, { target: { value: '10001' } });
-      fireEvent.change(springInput, { target: { value: '2024-04-15' } });
-      fireEvent.change(fallInput, { target: { value: '2024-10-15' } });
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(frostDateStorage.saveFrostDates).toHaveBeenCalledWith({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: '10001'
       });
     });
@@ -241,11 +330,15 @@ describe('FrostDateForm', () => {
     it('should work without onSave prop', () => {
       render(<FrostDateForm />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      const fallInput = screen.getByLabelText('First Fall Frost');
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
-      fireEvent.change(springInput, { target: { value: '2024-04-15' } });
-      fireEvent.change(fallInput, { target: { value: '2024-10-15' } });
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
       fireEvent.click(screen.getByText('Save Frost Dates'));
 
       expect(frostDateStorage.saveFrostDates).toHaveBeenCalled();
@@ -255,8 +348,8 @@ describe('FrostDateForm', () => {
   describe('clear functionality', () => {
     it('should show clear button when dates are set', () => {
       frostDateStorage.getFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: null
       });
 
@@ -274,8 +367,8 @@ describe('FrostDateForm', () => {
     it('should clear all fields when clear is clicked', () => {
       const onSave = vi.fn();
       frostDateStorage.getFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: '10001'
       });
 
@@ -283,8 +376,8 @@ describe('FrostDateForm', () => {
 
       fireEvent.click(screen.getByText('Clear'));
 
-      expect(screen.getByLabelText('Last Spring Frost')).toHaveValue('');
-      expect(screen.getByLabelText('First Fall Frost')).toHaveValue('');
+      expect(screen.getAllByDisplayValue('Month')).toHaveLength(2);
+      expect(screen.getAllByDisplayValue('Day')).toHaveLength(2);
       expect(screen.getByLabelText('ZIP Code (optional)')).toHaveValue('');
       expect(frostDateStorage.saveFrostDates).toHaveBeenCalledWith({
         lastSpringFrost: null,
@@ -296,8 +389,8 @@ describe('FrostDateForm', () => {
 
     it('should work without onSave prop when clearing', () => {
       frostDateStorage.getFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15',
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
         zipCode: null
       });
 
@@ -313,19 +406,27 @@ describe('FrostDateForm', () => {
     it('should update spring frost date on change', () => {
       render(<FrostDateForm />);
 
-      const springInput = screen.getByLabelText('Last Spring Frost');
-      fireEvent.change(springInput, { target: { value: '2024-04-15' } });
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
 
-      expect(springInput).toHaveValue('2024-04-15');
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+
+      expect(screen.getByDisplayValue('April')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('15')[0]).toBeInTheDocument();
     });
 
     it('should update fall frost date on change', () => {
       render(<FrostDateForm />);
 
-      const fallInput = screen.getByLabelText('First Fall Frost');
-      fireEvent.change(fallInput, { target: { value: '2024-10-15' } });
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
 
-      expect(fallInput).toHaveValue('2024-10-15');
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+
+      expect(screen.getByDisplayValue('October')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('15')[0]).toBeInTheDocument();
     });
 
     it('should update ZIP code on change', () => {
@@ -339,8 +440,8 @@ describe('FrostDateForm', () => {
 
     it('should clear errors after successful ZIP lookup', () => {
       frostDateLookup.lookupFrostDates.mockReturnValue({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
       frostDateLookup.isZipCodeSupported.mockReturnValue(true);
 

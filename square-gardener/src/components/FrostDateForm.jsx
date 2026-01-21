@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import MonthDayPicker from './MonthDayPicker';
 import { getFrostDates, saveFrostDates } from '../utils/frostDateStorage';
 import { lookupFrostDates, isZipCodeSupported } from '../utils/frostDateLookup';
+import { formatMonthDay, convertToMonthDay, isValidMonthDay, isBeforeInYear } from '../utils/dateFormatting';
 
 const getInitialState = (initialFrostDates) => {
   const frostDates = initialFrostDates || getFrostDates();
   return {
-    lastSpringFrost: frostDates.lastSpringFrost || '',
-    firstFallFrost: frostDates.firstFallFrost || '',
+    lastSpringFrost: convertToMonthDay(frostDates.lastSpringFrost) || '',
+    firstFallFrost: convertToMonthDay(frostDates.firstFallFrost) || '',
     zipCode: frostDates.zipCode || ''
   };
 };
@@ -25,16 +27,18 @@ function FrostDateForm({ onSave, initialFrostDates }) {
 
     if (!lastSpringFrost) {
       newErrors.lastSpringFrost = 'Last spring frost date is required';
+    } else if (!isValidMonthDay(lastSpringFrost)) {
+      newErrors.lastSpringFrost = 'Invalid date format';
     }
 
     if (!firstFallFrost) {
       newErrors.firstFallFrost = 'First fall frost date is required';
+    } else if (!isValidMonthDay(firstFallFrost)) {
+      newErrors.firstFallFrost = 'Invalid date format';
     }
 
-    if (lastSpringFrost && firstFallFrost) {
-      const springDate = new Date(lastSpringFrost);
-      const fallDate = new Date(firstFallFrost);
-      if (springDate >= fallDate) {
+    if (lastSpringFrost && firstFallFrost && isValidMonthDay(lastSpringFrost) && isValidMonthDay(firstFallFrost)) {
+      if (!isBeforeInYear(lastSpringFrost, firstFallFrost)) {
         newErrors.firstFallFrost = 'Fall frost must be after spring frost';
       }
     }
@@ -109,9 +113,9 @@ function FrostDateForm({ onSave, initialFrostDates }) {
           <p className="text-sm text-green-800">
             <span className="font-medium">Current frost dates:</span>
             <br />
-            Last Spring Frost: {new Date(lastSpringFrost + 'T00:00:00').toLocaleDateString()}
+            Last Spring Frost: {formatMonthDay(lastSpringFrost)}
             <br />
-            First Fall Frost: {new Date(firstFallFrost + 'T00:00:00').toLocaleDateString()}
+            First Fall Frost: {formatMonthDay(firstFallFrost)}
           </p>
         </div>
       )}
@@ -154,14 +158,11 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               <label htmlFor="last-spring-frost" className="block text-sm font-medium text-gray-700 mb-1">
                 Last Spring Frost
               </label>
-              <input
+              <MonthDayPicker
                 id="last-spring-frost"
-                type="date"
                 value={lastSpringFrost}
-                onChange={(e) => setLastSpringFrost(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${
-                  errors.lastSpringFrost ? 'border-red-500' : 'border-gray-300'
-                }`}
+                onChange={setLastSpringFrost}
+                hasError={!!errors.lastSpringFrost}
               />
               {errors.lastSpringFrost && (
                 <p className="mt-1 text-sm text-red-500">{errors.lastSpringFrost}</p>
@@ -172,14 +173,11 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               <label htmlFor="first-fall-frost" className="block text-sm font-medium text-gray-700 mb-1">
                 First Fall Frost
               </label>
-              <input
+              <MonthDayPicker
                 id="first-fall-frost"
-                type="date"
                 value={firstFallFrost}
-                onChange={(e) => setFirstFallFrost(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${
-                  errors.firstFallFrost ? 'border-red-500' : 'border-gray-300'
-                }`}
+                onChange={setFirstFallFrost}
+                hasError={!!errors.firstFallFrost}
               />
               {errors.firstFallFrost && (
                 <p className="mt-1 text-sm text-red-500">{errors.firstFallFrost}</p>

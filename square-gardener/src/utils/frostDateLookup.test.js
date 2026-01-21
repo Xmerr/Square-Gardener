@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   lookupFrostDates,
   isZipCodeSupported,
@@ -6,69 +6,89 @@ import {
 } from './frostDateLookup';
 
 describe('frostDateLookup', () => {
-  const mockYear = 2024;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(mockYear, 5, 15)); // June 15, 2024
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   describe('lookupFrostDates', () => {
     it('should return frost dates for a known NYC ZIP code', () => {
       const result = lookupFrostDates('10001');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
     });
 
     it('should return frost dates for Los Angeles area', () => {
       const result = lookupFrostDates('90001');
       expect(result).toEqual({
-        lastSpringFrost: '2024-02-15',
-        firstFallFrost: '2024-12-15'
+        lastSpringFrost: '02-15',
+        firstFallFrost: '12-15'
       });
     });
 
     it('should return frost dates for Chicago area', () => {
       const result = lookupFrostDates('60601');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-20',
-        firstFallFrost: '2024-10-10'
+        lastSpringFrost: '04-20',
+        firstFallFrost: '10-10'
       });
     });
 
     it('should return frost dates for Miami area', () => {
       const result = lookupFrostDates('33101');
       expect(result).toEqual({
-        lastSpringFrost: '2024-02-01',
-        firstFallFrost: '2024-12-25'
+        lastSpringFrost: '02-01',
+        firstFallFrost: '12-25'
       });
     });
 
     it('should return frost dates for Denver area', () => {
       const result = lookupFrostDates('80001');
       expect(result).toEqual({
-        lastSpringFrost: '2024-05-05',
-        firstFallFrost: '2024-09-25'
+        lastSpringFrost: '05-05',
+        firstFallFrost: '09-25'
       });
     });
 
     it('should return frost dates for Seattle area', () => {
       const result = lookupFrostDates('98001');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-10',
-        firstFallFrost: '2024-10-20'
+        lastSpringFrost: '04-10',
+        firstFallFrost: '10-20'
       });
     });
 
-    it('should return null for unknown ZIP code prefix', () => {
+    it('should return frost dates for Huntsville, AL (issue #45 acceptance criteria)', () => {
+      const result = lookupFrostDates('35759');
+      expect(result).toEqual({
+        lastSpringFrost: '03-25',
+        firstFallFrost: '11-05'
+      });
+    });
+
+    it('should return frost dates for various new states', () => {
+      // Vermont
+      expect(lookupFrostDates('05401')).toEqual({
+        lastSpringFrost: '05-25',
+        firstFallFrost: '09-05'
+      });
+
+      // Alaska (Anchorage)
+      expect(lookupFrostDates('99501')).toEqual({
+        lastSpringFrost: '05-20',
+        firstFallFrost: '09-10'
+      });
+
+      // Hawaii (no frost)
+      expect(lookupFrostDates('96701')).toEqual({
+        lastSpringFrost: '01-01',
+        firstFallFrost: '12-31'
+      });
+    });
+
+    it('should return frost dates for northernmost Alaska', () => {
       const result = lookupFrostDates('99999');
-      expect(result).toBe(null);
+      expect(result).toEqual({
+        lastSpringFrost: '06-20',
+        firstFallFrost: '08-10'
+      });
     });
 
     it('should return null for empty ZIP code', () => {
@@ -99,24 +119,24 @@ describe('frostDateLookup', () => {
     it('should handle ZIP codes with spaces', () => {
       const result = lookupFrostDates('100 01');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
     });
 
     it('should handle ZIP codes with dashes', () => {
       const result = lookupFrostDates('100-01');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
     });
 
     it('should work with only 3 digits', () => {
       const result = lookupFrostDates('100');
       expect(result).toEqual({
-        lastSpringFrost: '2024-04-15',
-        firstFallFrost: '2024-10-15'
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
       });
     });
   });
@@ -129,8 +149,10 @@ describe('frostDateLookup', () => {
     });
 
     it('should return false for unsupported ZIP codes', () => {
-      expect(isZipCodeSupported('99999')).toBe(false);
-      expect(isZipCodeSupported('00000')).toBe(false);
+      // Use a ZIP prefix that doesn't exist (like 001, 002, 003, etc.)
+      expect(isZipCodeSupported('00100')).toBe(false);
+      expect(isZipCodeSupported('00200')).toBe(false);
+      expect(isZipCodeSupported('00300')).toBe(false);
     });
 
     it('should return false for invalid input', () => {

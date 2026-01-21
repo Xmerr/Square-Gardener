@@ -151,7 +151,22 @@ describe('BedManager', () => {
       fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
       fireEvent.click(screen.getByText('Create Bed'));
 
-      expect(storage.addGardenBed).toHaveBeenCalledWith('New Bed', 4, 4);
+      expect(storage.addGardenBed).toHaveBeenCalledWith('New Bed', 4, 4, { is_pot: false });
+      expect(mockOnBedChange).toHaveBeenCalled();
+    });
+
+    it('creates pot with size and refreshes list', () => {
+      storage.addGardenBed.mockReturnValue({ id: 'pot-new', name: 'New Pot', is_pot: true, size: 'large' });
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByText('Add New Bed'));
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'New Pot' } });
+      fireEvent.click(screen.getByLabelText('This is a pot'));
+      fireEvent.change(screen.getByLabelText('Size'), { target: { value: 'large' } });
+      fireEvent.click(screen.getByText('Create Pot'));
+
+      expect(storage.addGardenBed).toHaveBeenCalledWith('New Pot', null, null, { is_pot: true, size: 'large' });
       expect(mockOnBedChange).toHaveBeenCalled();
     });
 
@@ -371,7 +386,7 @@ describe('BedManager', () => {
       fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
       fireEvent.click(screen.getByText('Create Bed'));
 
-      expect(storage.addGardenBed).toHaveBeenCalled();
+      expect(storage.addGardenBed).toHaveBeenCalledWith('Test', 4, 4, { is_pot: false });
     });
 
     it('handles missing onBedChange on update', () => {

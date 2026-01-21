@@ -50,7 +50,11 @@ function BedManager({ onBedChange }) {
   };
 
   const handleCreateBed = (data) => {
-    addGardenBed(data.name, data.width, data.height);
+    if (data.is_pot) {
+      addGardenBed(data.name, null, null, { is_pot: true, size: data.size });
+    } else {
+      addGardenBed(data.name, data.width, data.height, { is_pot: false });
+    }
     loadBeds();
     setShowForm(false);
     onBedChange?.();
