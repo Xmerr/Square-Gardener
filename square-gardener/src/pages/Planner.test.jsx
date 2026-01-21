@@ -54,10 +54,11 @@ vi.mock('../components/PlantSelector', () => ({
 }));
 
 vi.mock('../components/PlanningGrid', () => ({
-  default: ({ bed }) => (
+  default: ({ bed, onArrangementChange, editable }) => (
     <div>
       <h3>Garden Layout ({bed?.width}×{bed?.height})</h3>
       <div>Arrangement Grid</div>
+      {editable && <button onClick={() => onArrangementChange && onArrangementChange({ grid: [['modified']] })}>Mock Edit</button>}
     </div>
   )
 }));
@@ -566,5 +567,277 @@ describe('Planner', () => {
 
     // The generate button won't even be visible in this state
     expect(screen.queryByText('Generate Plan')).not.toBeInTheDocument();
+  });
+
+  describe('editing functionality', () => {
+    it('shows undo/redo buttons after plan is generated', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Undo/Redo buttons should appear
+      expect(screen.getByText('Undo')).toBeInTheDocument();
+      expect(screen.getByText('Redo')).toBeInTheDocument();
+    });
+
+    it('shows Regenerate button after plan is generated', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Regenerate button should appear
+      expect(screen.getByText('Regenerate')).toBeInTheDocument();
+    });
+
+    it('disables undo button when no history', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Undo should be disabled initially
+      const undoButton = screen.getByText('Undo');
+      expect(undoButton).toBeDisabled();
+    });
+
+    it('enables undo button after making changes', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make an edit
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+
+      // Undo should be enabled now
+      const undoButton = screen.getByText('Undo');
+      expect(undoButton).not.toBeDisabled();
+    });
+
+    it('enables redo button after undoing', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make an edit
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+
+      // Undo
+      const undoButton = screen.getByText('Undo');
+      fireEvent.click(undoButton);
+
+      // Redo should be enabled now
+      const redoButton = screen.getByText('Redo');
+      expect(redoButton).not.toBeDisabled();
+    });
+
+    it('disables redo button when at latest state', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Redo should be disabled initially
+      const redoButton = screen.getByText('Redo');
+      expect(redoButton).toBeDisabled();
+    });
+
+    it('regenerate creates new arrangement with same plants', () => {
+      planningAlgorithm.generateArrangement.mockClear();
+
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Clear the mock to verify regenerate calls it again
+      planningAlgorithm.generateArrangement.mockClear();
+
+      // Click Regenerate
+      const regenerateButton = screen.getByText('Regenerate');
+      fireEvent.click(regenerateButton);
+
+      // Should call generateArrangement again with same params
+      expect(planningAlgorithm.generateArrangement).toHaveBeenCalledWith({
+        width: 4,
+        height: 4,
+        plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+        lockedSquares: null
+      });
+    });
+
+    it('clears future history after making new changes', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make first edit
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+
+      // Undo
+      const undoButton = screen.getByText('Undo');
+      fireEvent.click(undoButton);
+
+      // Make another edit (this should clear the redo history)
+      fireEvent.click(mockEditButton);
+
+      // Redo should be disabled because we branched the history
+      const redoButton = screen.getByText('Redo');
+      expect(redoButton).toBeDisabled();
+    });
+
+    it('passes editable prop to PlanningGrid after generation', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Mock Edit button should be visible (only shown when editable=true)
+      expect(screen.getByText('Mock Edit')).toBeInTheDocument();
+    });
+
+    it('resets history when regenerating plan', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make an edit
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+
+      // Undo should be enabled
+      let undoButton = screen.getByText('Undo');
+      expect(undoButton).not.toBeDisabled();
+
+      // Regenerate
+      const regenerateButton = screen.getByText('Regenerate');
+      fireEvent.click(regenerateButton);
+
+      // Undo should be disabled again (history reset)
+      undoButton = screen.getByText('Undo');
+      expect(undoButton).toBeDisabled();
+    });
+
+    it('handles redo correctly when history is available', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make an edit
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+
+      // Undo
+      const undoButton = screen.getByText('Undo');
+      fireEvent.click(undoButton);
+
+      // Redo should be enabled
+      const redoButton = screen.getByText('Redo');
+      expect(redoButton).not.toBeDisabled();
+
+      // Click Redo
+      fireEvent.click(redoButton);
+
+      // After redo, we should be back at the latest state
+      // Redo should be disabled again
+      expect(redoButton).toBeDisabled();
+    });
+
+    it('handles undo when history index is greater than 0', () => {
+      render(<Planner />);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Make two edits
+      const mockEditButton = screen.getByText('Mock Edit');
+      fireEvent.click(mockEditButton);
+      fireEvent.click(mockEditButton);
+
+      // Undo should be enabled
+      const undoButton = screen.getByText('Undo');
+      expect(undoButton).not.toBeDisabled();
+
+      // Click Undo
+      fireEvent.click(undoButton);
+
+      // Should still be able to undo again since we made two edits
+      expect(undoButton).not.toBeDisabled();
+
+      // Undo again
+      fireEvent.click(undoButton);
+
+      // Now undo should be disabled (back to initial state)
+      expect(undoButton).toBeDisabled();
+    });
   });
 });

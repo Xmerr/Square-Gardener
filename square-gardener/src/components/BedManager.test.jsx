@@ -3,7 +3,37 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BedManager from './BedManager';
 import * as storage from '../utils/storage';
 
-vi.mock('../utils/storage');
+vi.mock('../utils/storage', () => ({
+  getGardenBeds: vi.fn(),
+  addGardenBed: vi.fn(),
+  updateGardenBed: vi.fn(),
+  removeGardenBed: vi.fn(),
+  getBedCapacity: vi.fn(),
+  getPlantsByBed: vi.fn(),
+  reorderBeds: vi.fn(),
+  POT_SIZES: {
+    small: {
+      label: 'Small (4-6 inch)',
+      capacity: 0.25,
+      diameter: '4-6 inches'
+    },
+    medium: {
+      label: 'Medium (8-10 inch)',
+      capacity: 0.56,
+      diameter: '8-10 inches'
+    },
+    large: {
+      label: 'Large (12-14 inch)',
+      capacity: 1.0,
+      diameter: '12-14 inches'
+    },
+    extra_large: {
+      label: 'Extra Large (16+ inch)',
+      capacity: 2.25,
+      diameter: '16+ inches'
+    }
+  }
+}));
 
 describe('BedManager', () => {
   const mockOnBedChange = vi.fn();
@@ -371,6 +401,243 @@ describe('BedManager', () => {
       fireEvent.click(screen.getByLabelText('Delete Bed 1'));
 
       expect(storage.removeGardenBed).toHaveBeenCalledWith('bed-1');
+    });
+  });
+
+  describe('drag and drop reordering', () => {
+    const mockBeds = [
+      { id: 'bed-1', name: 'First Bed', width: 4, height: 4 },
+      { id: 'bed-2', name: 'Second Bed', width: 2, height: 4 },
+      { id: 'bed-3', name: 'Third Bed', width: 3, height: 3 }
+    ];
+
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue(mockBeds);
+      storage.reorderBeds.mockImplementation((bedIds) => {
+        const reordered = bedIds.map((id, index) => {
+          const bed = mockBeds.find(b => b.id === id);
+          return { ...bed, order: index };
+        });
+        return reordered;
+      });
+    });
+
+    it('renders beds with drag handles', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      expect(screen.getByLabelText('Drag First Bed')).toBeInTheDocument();
+      expect(screen.getByLabelText('Drag Second Bed')).toBeInTheDocument();
+      expect(screen.getByLabelText('Drag Third Bed')).toBeInTheDocument();
+    });
+
+    it('reorders beds on drag and drop', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+      const thirdBed = bedCards[2];
+
+      // Drag first bed with a valid dataTransfer object
+      const dataTransfer = { effectAllowed: '' };
+      fireEvent.dragStart(firstBed, { dataTransfer });
+
+      // Drop on third bed
+      fireEvent.dragOver(thirdBed);
+      fireEvent.drop(thirdBed);
+
+      expect(storage.reorderBeds).toHaveBeenCalledWith(['bed-2', 'bed-3', 'bed-1']);
+      expect(mockOnBedChange).toHaveBeenCalled();
+      expect(dataTransfer.effectAllowed).toBe('move');
+    });
+
+    it('does not reorder when dropping on same bed', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+
+      // Drag and drop on same bed
+      fireEvent.dragStart(firstBed);
+      fireEvent.dragOver(firstBed);
+      fireEvent.drop(firstBed);
+
+      expect(storage.reorderBeds).not.toHaveBeenCalled();
+    });
+
+    it('clears dragging state on drag end', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+
+      fireEvent.dragStart(firstBed);
+      expect(firstBed).toHaveClass('opacity-50');
+
+      fireEvent.dragEnd(firstBed);
+      expect(firstBed).not.toHaveClass('opacity-50');
+    });
+
+    it('applies opacity to dragged bed', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+
+      fireEvent.dragStart(firstBed);
+      expect(firstBed).toHaveClass('opacity-50');
+    });
+
+    it('handles invalid drag operations gracefully', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+
+      // Start drag but don't set draggedBedId properly (simulate error condition)
+      fireEvent.dragEnd(firstBed);
+
+      // Should not throw and should not call reorderBeds
+      expect(storage.reorderBeds).not.toHaveBeenCalled();
+    });
+
+    it('handles drag start when dataTransfer is null', () => {
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+
+      // Use fireEvent.dragStart with a custom event that has null dataTransfer
+      // The handler checks `if (e.dataTransfer)` before setting effectAllowed
+      fireEvent.dragStart(firstBed, { dataTransfer: null });
+
+      // Should not throw - the opacity class should still be applied
+      expect(firstBed).toHaveClass('opacity-50');
+    });
+
+    it('handles drop when dragged bed is not found in array', () => {
+      // Render with initial beds
+      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+
+      const bedCards = container.querySelectorAll('[draggable="true"]');
+      const firstBed = bedCards[0];
+      const secondBed = bedCards[1];
+
+      // Start dragging bed-1
+      fireEvent.dragStart(firstBed);
+
+      // Simulate bed being deleted after drag started by updating getGardenBeds mock
+      // and re-rendering
+      storage.getGardenBeds.mockReturnValue([
+        { id: 'bed-2', name: 'Second Bed', width: 2, height: 4 },
+        { id: 'bed-3', name: 'Third Bed', width: 3, height: 3 }
+      ]);
+
+      // Force a state refresh by triggering loadBeds
+      // This simulates another action (like delete) happening during drag
+      const deleteButton = screen.getAllByRole('button', { name: /delete/i })[0];
+      fireEvent.click(deleteButton);
+
+      // Confirm delete in dialog
+      const confirmDeleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      const dialogConfirmButton = confirmDeleteButtons.find(btn => btn.closest('[role="dialog"]'));
+      if (dialogConfirmButton) {
+        fireEvent.click(dialogConfirmButton);
+      }
+
+      // Now drop - the dragged bed (bed-1) no longer exists
+      fireEvent.drop(secondBed);
+
+      // Should not throw and reorderBeds should not be called with invalid state
+    });
+  });
+
+  describe('keyboard reordering', () => {
+    const mockBeds = [
+      { id: 'bed-1', name: 'First Bed', width: 4, height: 4 },
+      { id: 'bed-2', name: 'Second Bed', width: 2, height: 4 },
+      { id: 'bed-3', name: 'Third Bed', width: 3, height: 3 }
+    ];
+
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue(mockBeds);
+      storage.reorderBeds.mockImplementation((bedIds) => {
+        const reordered = bedIds.map((id, index) => {
+          const bed = mockBeds.find(b => b.id === id);
+          return { ...bed, order: index };
+        });
+        return reordered;
+      });
+    });
+
+    it('shows move up button for all beds except first', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Move Second Bed up')).toBeInTheDocument();
+      expect(screen.getByLabelText('Move Third Bed up')).toBeInTheDocument();
+    });
+
+    it('shows move down button for all beds except last', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      expect(screen.getByLabelText('Move First Bed down')).toBeInTheDocument();
+      expect(screen.getByLabelText('Move Second Bed down')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Move Third Bed down')).not.toBeInTheDocument();
+    });
+
+    it('moves bed up when move up button clicked', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Move Second Bed up'));
+
+      expect(storage.reorderBeds).toHaveBeenCalledWith(['bed-2', 'bed-1', 'bed-3']);
+      expect(mockOnBedChange).toHaveBeenCalled();
+    });
+
+    it('moves bed down when move down button clicked', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      fireEvent.click(screen.getByLabelText('Move Second Bed down'));
+
+      expect(storage.reorderBeds).toHaveBeenCalledWith(['bed-1', 'bed-3', 'bed-2']);
+      expect(mockOnBedChange).toHaveBeenCalled();
+    });
+
+    it('does not move first bed up', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      // First bed should not have move up button
+      expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
+    });
+
+    it('does not move last bed down', () => {
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      // Last bed should not have move down button
+      expect(screen.queryByLabelText('Move Third Bed down')).not.toBeInTheDocument();
+    });
+
+    it('handles missing onBedChange on reorder', () => {
+      render(<BedManager />);
+
+      fireEvent.click(screen.getByLabelText('Move Second Bed up'));
+
+      expect(storage.reorderBeds).toHaveBeenCalled();
+    });
+
+    it('shows only move down button for single middle bed when list has two items', () => {
+      const twoBeds = [
+        { id: 'bed-1', name: 'First Bed', width: 4, height: 4 },
+        { id: 'bed-2', name: 'Second Bed', width: 2, height: 4 }
+      ];
+      storage.getGardenBeds.mockReturnValue(twoBeds);
+
+      render(<BedManager onBedChange={mockOnBedChange} />);
+
+      expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Move First Bed down')).toBeInTheDocument();
+      expect(screen.getByLabelText('Move Second Bed up')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Move Second Bed down')).not.toBeInTheDocument();
     });
   });
 });

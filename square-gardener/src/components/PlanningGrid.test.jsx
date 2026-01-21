@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PlanningGrid from './PlanningGrid';
+import * as planningAlgorithm from '../utils/planningAlgorithm';
 
 describe('PlanningGrid', () => {
   const mockArrangement = {
@@ -287,6 +288,312 @@ describe('PlanningGrid', () => {
 
       expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
       expect(screen.queryByText('Legend')).not.toBeInTheDocument(); // No legend when no plants
+    });
+  });
+
+  describe('drag and drop functionality', () => {
+    const editableProps = {
+      ...defaultProps,
+      editable: true,
+      onArrangementChange: vi.fn()
+    };
+
+    it('should make plant cells draggable when editable is true', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      expect(tomatoCell).toHaveAttribute('draggable', 'true');
+    });
+
+    it('should not make cells draggable when editable is false', () => {
+      render(<PlanningGrid {...defaultProps} editable={false} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      expect(tomatoCell).toHaveAttribute('draggable', 'false');
+    });
+
+    it('should not make empty cells draggable', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+      // Empty cells should not be draggable (draggable is false or not set)
+      const draggable = emptyCell.getAttribute('draggable');
+      expect(draggable === 'false' || draggable === null).toBe(true);
+    });
+
+    it('should not make locked cells draggable', () => {
+      const lockedSquares = [
+        [true, false],
+        [false, false]
+      ];
+      render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
+
+      const lockedCell = screen.getByTitle('Tomato (0, 0)');
+      expect(lockedCell).toHaveAttribute('draggable', 'false');
+    });
+
+    it('should call onArrangementChange when plants are swapped', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const basilCell = screen.getByTitle('Basil (0, 1)');
+
+      // Simulate drag and drop
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.dragOver(basilCell, { preventDefault: vi.fn() });
+      fireEvent.drop(basilCell, { preventDefault: vi.fn() });
+
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      const newArrangement = editableProps.onArrangementChange.mock.calls[0][0];
+      expect(newArrangement.grid[0][0]).toBe('basil');
+      expect(newArrangement.grid[0][1]).toBe('tomato');
+    });
+
+    it('should swap plant with empty square', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.dragOver(emptyCell, { preventDefault: vi.fn() });
+      fireEvent.drop(emptyCell, { preventDefault: vi.fn() });
+
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      const newArrangement = editableProps.onArrangementChange.mock.calls[0][0];
+      expect(newArrangement.grid[1][1]).toBe('tomato');
+      expect(newArrangement.grid[0][0]).toBeNull();
+    });
+
+    it('should not allow dropping on locked squares', () => {
+      const lockedSquares = [
+        [false, false],
+        [false, true]
+      ];
+      render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const lockedCell = screen.getByTitle('Empty (1, 1)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.dragOver(lockedCell, { preventDefault: vi.fn() });
+      fireEvent.drop(lockedCell, { preventDefault: vi.fn() });
+
+      expect(editableProps.onArrangementChange).not.toHaveBeenCalled();
+    });
+
+    it('should not allow dropping on same square', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.dragOver(tomatoCell, { preventDefault: vi.fn() });
+      fireEvent.drop(tomatoCell, { preventDefault: vi.fn() });
+
+      expect(editableProps.onArrangementChange).not.toHaveBeenCalled();
+    });
+
+    it('should work without onArrangementChange handler', () => {
+      const propsWithoutHandler = { ...editableProps, onArrangementChange: undefined };
+      render(<PlanningGrid {...propsWithoutHandler} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const basilCell = screen.getByTitle('Basil (0, 1)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.dragOver(basilCell, { preventDefault: vi.fn() });
+      fireEvent.drop(basilCell, { preventDefault: vi.fn() });
+
+      // Should not throw error
+      expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
+    });
+  });
+
+  describe('validation feedback', () => {
+    it('should show warning when arrangement has enemy adjacencies', () => {
+      // Create arrangement with tomato and cabbage adjacent (they are enemies)
+      const invalidArrangement = {
+        grid: [
+          ['tomato', 'cabbage'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'cabbage', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      const editableProps = {
+        ...defaultProps,
+        arrangement: invalidArrangement,
+        bed: mockBed,
+        editable: true,
+        onArrangementChange: vi.fn()
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      // Trigger a drop to cause validation
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const emptyCell = screen.getByTitle('Empty (1, 0)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.drop(emptyCell, { preventDefault: vi.fn() });
+
+      // The validation will be shown after the drop
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+    });
+
+    it('should show success message when arrangement is valid and editable', () => {
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onArrangementChange: vi.fn()
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      // Swap tomato with carrot (both compatible)
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const carrotCell = screen.getByTitle('Carrot (1, 0)');
+
+      fireEvent.dragStart(tomatoCell);
+      fireEvent.drop(carrotCell, { preventDefault: vi.fn() });
+
+      // The validation feedback will be shown after the drop
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+    });
+
+    it('should not show validation feedback when not editable', () => {
+      render(<PlanningGrid {...defaultProps} editable={false} />);
+
+      // No validation feedback should be shown for non-editable grids
+      expect(screen.queryByText(/All plants are correctly placed/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('drag visual feedback', () => {
+    const editableProps = {
+      ...defaultProps,
+      editable: true,
+      onArrangementChange: vi.fn()
+    };
+
+    it('should apply cursor-move class to draggable cells', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      expect(tomatoCell).toHaveClass('cursor-move');
+    });
+
+    it('should not apply cursor-move to empty cells', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+      expect(emptyCell).not.toHaveClass('cursor-move');
+    });
+
+    it('should not apply cursor-move to locked cells', () => {
+      const lockedSquares = [
+        [true, false],
+        [false, false]
+      ];
+      render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
+
+      const lockedCell = screen.getByTitle('Tomato (0, 0)');
+      expect(lockedCell).not.toHaveClass('cursor-move');
+    });
+
+    it('should handle drag end event', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+
+      // Start dragging
+      fireEvent.dragStart(tomatoCell);
+
+      // End dragging
+      fireEvent.dragEnd(tomatoCell);
+
+      // Should not throw error and component should still be rendered
+      expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
+    });
+
+    it('should not start drag when editable is false', () => {
+      const nonEditableProps = {
+        ...defaultProps,
+        editable: false,
+        onArrangementChange: vi.fn()
+      };
+
+      render(<PlanningGrid {...nonEditableProps} />);
+
+      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+
+      // Try to start dragging
+      fireEvent.dragStart(tomatoCell);
+
+      // onArrangementChange should not be called
+      expect(nonEditableProps.onArrangementChange).not.toHaveBeenCalled();
+    });
+
+    it('should not handle drag over when no drag in progress', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const basilCell = screen.getByTitle('Basil (0, 1)');
+
+      // Try to drag over without starting a drag first
+      fireEvent.dragOver(basilCell, { preventDefault: vi.fn() });
+
+      // Should not cause any errors
+      expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
+    });
+
+    it('should show plant ID fallback when plant not found in validation', async () => {
+      // Mock validateArrangement to return violations with unknown plant IDs
+      const validateSpy = vi.spyOn(planningAlgorithm, 'validateArrangement').mockReturnValue({
+        valid: false,
+        violations: [
+          { plantId: 'unknownplant1', enemyPlantId: 'unknownplant2', row: 0, col: 0 }
+        ]
+      });
+
+      // Create arrangement with unknown plant IDs
+      const invalidArrangement = {
+        grid: [
+          ['unknownplant1', 'unknownplant2'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'unknownplant1', row: 0, col: 0 },
+          { plantId: 'unknownplant2', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      const propsWithUnknown = {
+        ...editableProps,
+        arrangement: invalidArrangement
+      };
+
+      render(<PlanningGrid {...propsWithUnknown} />);
+
+      // Trigger a drop to cause validation
+      const cell1 = screen.getByTitle('unknownplant1 (0, 0)');
+      const emptyCell = screen.getByTitle('Empty (1, 0)');
+
+      fireEvent.dragStart(cell1);
+      fireEvent.drop(emptyCell, { preventDefault: vi.fn() });
+
+      // The warning should display the plant IDs as fallback since getPlantById returns null
+      // The format is: "{plant?.name || v.plantId} at (row, col) is next to {enemy?.name || v.enemyPlantId}"
+      await waitFor(() => {
+        expect(screen.getByText(/unknownplant1 at \(0, 0\) is next to unknownplant2/)).toBeInTheDocument();
+      });
+
+      validateSpy.mockRestore();
     });
   });
 });

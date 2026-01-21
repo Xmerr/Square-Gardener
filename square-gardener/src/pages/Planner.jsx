@@ -19,6 +19,8 @@ function Planner() {
   const [arrangement, setArrangement] = useState(null);
   const [schedule, setSchedule] = useState([]);
   const [error, setError] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const handleFrostDatesSave = (dates) => {
     setFrostDates(dates);
@@ -46,6 +48,8 @@ function Planner() {
       });
 
       setArrangement(result);
+      setHistory([result]);
+      setHistoryIndex(0);
 
       // Generate planting schedule if frost dates are available
       if (frostDates && frostDates.lastSpringFrost && frostDates.firstFallFrost) {
@@ -56,7 +60,35 @@ function Planner() {
       setError(err.message);
       setArrangement(null);
       setSchedule([]);
+      setHistory([]);
+      setHistoryIndex(-1);
     }
+  };
+
+  const handleArrangementChange = (newArrangement) => {
+    setArrangement(newArrangement);
+
+    // Add to history, removing any future history
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newArrangement);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const handleUndo = () => {
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setArrangement(history[newIndex]);
+  };
+
+  const handleRedo = () => {
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setArrangement(history[newIndex]);
+  };
+
+  const handleRegenerate = () => {
+    handleGeneratePlan();
   };
 
   const handleBedChange = (bedId) => {
@@ -127,12 +159,52 @@ function Planner() {
                 </div>
 
                 {arrangement && (
-                  <PlanningGrid
-                    arrangement={arrangement}
-                    bed={selectedBed}
-                    onSquareClick={null}
-                    lockedSquares={null}
-                  />
+                  <>
+                    <div className="flex items-center justify-between gap-4 bg-white rounded-lg shadow-md p-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleUndo}
+                          disabled={historyIndex <= 0}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                          title="Undo last change"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          Undo
+                        </button>
+                        <button
+                          onClick={handleRedo}
+                          disabled={historyIndex >= history.length - 1}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                          title="Redo last undone change"
+                        >
+                          Redo
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleRegenerate}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                        title="Generate a new arrangement with the same plants"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Regenerate
+                      </button>
+                    </div>
+                    <PlanningGrid
+                      arrangement={arrangement}
+                      bed={selectedBed}
+                      onSquareClick={null}
+                      lockedSquares={null}
+                      onArrangementChange={handleArrangementChange}
+                      editable={true}
+                    />
+                  </>
                 )}
 
                 {schedule.length > 0 && (
