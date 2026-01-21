@@ -8,7 +8,7 @@ import Calendar from './pages/Calendar';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/Square-Gardener/">
       <div className="min-h-screen flex flex-col">
         <header className="bg-gradient-to-br from-primary to-primary-light text-white py-6 px-4 sm:py-8 text-center shadow-md">
           <h1 className="m-0 text-2xl sm:text-3xl md:text-4xl font-bold">

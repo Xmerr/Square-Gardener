@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
 describe('App', () => {
+  beforeEach(() => {
+    // Reset window location for each test
+    window.history.pushState({}, '', '/Square-Gardener/');
+  });
+
   it('renders the Square Gardener header', () => {
     render(<App />);
     const headers = screen.getAllByText(/Square Gardener/);
