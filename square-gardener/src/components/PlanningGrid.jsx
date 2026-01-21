@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { getPlantById } from '../data/plantLibrary';
+import { validateArrangement } from '../utils/planningAlgorithm';
 
 const PLANT_COLORS = {
   tomato: '#ef4444',
@@ -47,10 +48,14 @@ const getContrastColor = (hexColor) => {
   return luminance > 0.5 ? '#1f2937' : '#ffffff';
 };
 
-function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares }) {
+function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrangementChange, editable = false }) {
   const grid = useMemo(() => arrangement?.grid || [], [arrangement]);
   const width = bed?.width || 0;
   const height = bed?.height || 0;
+
+  const [draggedSquare, setDraggedSquare] = useState(null);
+  const [dragOverSquare, setDragOverSquare] = useState(null);
+  const [validation, setValidation] = useState(null);
 
   const plantCounts = useMemo(() => {
     const counts = {};
@@ -82,6 +87,65 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares }) {
     }
   };
 
+  const handleDragStart = (row, col, plantId) => {
+    if (!editable || !plantId || lockedSquares?.[row]?.[col]) {
+      return;
+    }
+    setDraggedSquare({ row, col, plantId });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSquare(null);
+    setDragOverSquare(null);
+  };
+
+  const handleDragOver = (e, row, col) => {
+    if (!editable || !draggedSquare) return;
+
+    e.preventDefault();
+    setDragOverSquare({ row, col });
+  };
+
+  const handleDrop = (e, targetRow, targetCol) => {
+    e.preventDefault();
+
+    if (!editable || !draggedSquare || lockedSquares?.[targetRow]?.[targetCol]) {
+      setDraggedSquare(null);
+      setDragOverSquare(null);
+      return;
+    }
+
+    // Don't allow dropping on same square
+    if (draggedSquare.row === targetRow && draggedSquare.col === targetCol) {
+      setDraggedSquare(null);
+      setDragOverSquare(null);
+      return;
+    }
+
+    // Create new grid with swapped plants
+    const newGrid = grid.map(row => [...row]);
+    const draggedPlant = newGrid[draggedSquare.row][draggedSquare.col];
+    const targetPlant = newGrid[targetRow][targetCol];
+
+    newGrid[targetRow][targetCol] = draggedPlant;
+    newGrid[draggedSquare.row][draggedSquare.col] = targetPlant;
+
+    // Validate the new arrangement
+    const validationResult = validateArrangement(newGrid);
+    setValidation(validationResult);
+
+    // Update the arrangement
+    if (onArrangementChange) {
+      onArrangementChange({
+        ...arrangement,
+        grid: newGrid
+      });
+    }
+
+    setDraggedSquare(null);
+    setDragOverSquare(null);
+  };
+
   if (!grid.length || !width || !height) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -108,6 +172,8 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares }) {
             {grid.map((row, rowIndex) =>
               row.map((plantId, colIndex) => {
                 const isLocked = lockedSquares?.[rowIndex]?.[colIndex];
+                const isDragging = draggedSquare?.row === rowIndex && draggedSquare?.col === colIndex;
+                const isDragOver = dragOverSquare?.row === rowIndex && dragOverSquare?.col === colIndex;
                 const bgColor = plantId ? getPlantColor(plantId) : '#f5f5f4';
                 const textColor = plantId ? getContrastColor(bgColor) : '#9ca3af';
                 const plant = plantId ? getPlantById(plantId) : null;
@@ -119,9 +185,14 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares }) {
                   <button
                     key={`${rowIndex}-${colIndex}`}
                     onClick={() => handleSquareClick(rowIndex, colIndex, plantId)}
+                    draggable={editable && plantId && !isLocked}
+                    onDragStart={() => handleDragStart(rowIndex, colIndex, plantId)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, rowIndex, colIndex)}
+                    onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
                     className={`${cellSize} rounded flex items-center justify-center font-medium transition-transform hover:scale-105 relative ${
                       isLocked ? 'ring-2 ring-gray-400' : ''
-                    }`}
+                    } ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''} ${editable && plantId && !isLocked ? 'cursor-move' : ''}`}
                     style={{ backgroundColor: bgColor, color: textColor }}
                     title={`${displayName} (${rowIndex}, ${colIndex})`}
                   >
@@ -157,6 +228,46 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares }) {
         )}
       </div>
 
+      {validation && validation.violations.length > 0 && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-2 mb-2">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h4 className="font-semibold text-red-800 mb-1">Enemy Adjacency Warning</h4>
+              <p className="text-sm text-red-700 mb-2">
+                The following plants are adjacent to their enemies and should be separated:
+              </p>
+              <ul className="space-y-1">
+                {validation.violations.map((v, index) => {
+                  const plant = getPlantById(v.plantId);
+                  const enemy = getPlantById(v.enemyPlantId);
+                  return (
+                    <li key={index} className="text-sm text-red-700">
+                      {plant?.name || v.plantId} at ({v.row}, {v.col}) is next to {enemy?.name || v.enemyPlantId}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {validation && validation.valid && editable && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm text-green-700 font-medium">
+              All plants are correctly placed with no enemy adjacencies
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
           <span>
@@ -188,7 +299,9 @@ PlanningGrid.propTypes = {
     height: PropTypes.number.isRequired
   }),
   onSquareClick: PropTypes.func,
-  lockedSquares: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.bool))
+  lockedSquares: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.bool)),
+  onArrangementChange: PropTypes.func,
+  editable: PropTypes.bool
 };
 
 export default PlanningGrid;

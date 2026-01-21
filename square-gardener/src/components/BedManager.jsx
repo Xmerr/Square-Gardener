@@ -9,7 +9,8 @@ import {
   updateGardenBed,
   removeGardenBed,
   getBedCapacity,
-  getPlantsByBed
+  getPlantsByBed,
+  reorderBeds
 } from '../utils/storage';
 
 function BedManager({ onBedChange }) {
@@ -18,6 +19,7 @@ function BedManager({ onBedChange }) {
   const [editingBed, setEditingBed] = useState(null);
   const [deletingBed, setDeletingBed] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [draggedBedId, setDraggedBedId] = useState(null);
 
   const capacities = useMemo(() => {
     const caps = {};
@@ -113,6 +115,79 @@ function BedManager({ onBedChange }) {
     setDeleteError(null);
   };
 
+  const handleDragStart = (e, bed) => {
+    setDraggedBedId(bed.id);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBedId(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, targetBed) => {
+    e.preventDefault();
+
+    if (!draggedBedId || draggedBedId === targetBed.id) {
+      setDraggedBedId(null);
+      return;
+    }
+
+    const draggedIndex = beds.findIndex(b => b.id === draggedBedId);
+    const targetIndex = beds.findIndex(b => b.id === targetBed.id);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedBedId(null);
+      return;
+    }
+
+    // Create new order by reordering the beds
+    const newBeds = [...beds];
+    const [draggedBed] = newBeds.splice(draggedIndex, 1);
+    newBeds.splice(targetIndex, 0, draggedBed);
+
+    // Save the new order
+    const bedIds = newBeds.map(b => b.id);
+    reorderBeds(bedIds);
+
+    loadBeds();
+    setDraggedBedId(null);
+    onBedChange?.();
+  };
+
+  const handleMoveUp = (bed) => {
+    const index = beds.findIndex(b => b.id === bed.id);
+    if (index <= 0) return;
+
+    const newBeds = [...beds];
+    [newBeds[index - 1], newBeds[index]] = [newBeds[index], newBeds[index - 1]];
+
+    const bedIds = newBeds.map(b => b.id);
+    reorderBeds(bedIds);
+
+    loadBeds();
+    onBedChange?.();
+  };
+
+  const handleMoveDown = (bed) => {
+    const index = beds.findIndex(b => b.id === bed.id);
+    if (index === -1 || index >= beds.length - 1) return;
+
+    const newBeds = [...beds];
+    [newBeds[index], newBeds[index + 1]] = [newBeds[index + 1], newBeds[index]];
+
+    const bedIds = newBeds.map(b => b.id);
+    reorderBeds(bedIds);
+
+    loadBeds();
+    onBedChange?.();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -163,7 +238,7 @@ function BedManager({ onBedChange }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {beds.map((bed) => (
+          {beds.map((bed, index) => (
             <BedCard
               key={bed.id}
               bed={bed}
@@ -172,6 +247,15 @@ function BedManager({ onBedChange }) {
               plants={plantsByBed[bed.id]}
               onEdit={handleEdit}
               onDelete={handleDeleteBed}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              isDragging={draggedBedId === bed.id}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              showMoveUp={index > 0}
+              showMoveDown={index < beds.length - 1}
             />
           ))}
         </div>

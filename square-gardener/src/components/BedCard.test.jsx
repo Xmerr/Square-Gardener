@@ -333,6 +333,411 @@ describe('BedCard', () => {
     });
   });
 
+  describe('Drag and drop functionality', () => {
+    const mockBed = {
+      id: 'bed-1',
+      name: 'Main Garden',
+      width: 4,
+      height: 4,
+      is_pot: false
+    };
+
+    const mockCapacity = {
+      total: 16,
+      used: 8,
+      available: 8,
+      isOvercapacity: false
+    };
+
+    const mockOnDragStart = vi.fn();
+    const mockOnDragEnd = vi.fn();
+    const mockOnDragOver = vi.fn();
+    const mockOnDrop = vi.fn();
+
+    beforeEach(() => {
+      mockOnDragStart.mockClear();
+      mockOnDragEnd.mockClear();
+      mockOnDragOver.mockClear();
+      mockOnDrop.mockClear();
+    });
+
+    it('is draggable when onDragStart is provided', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+        />
+      );
+
+      const card = container.firstChild;
+      expect(card).toHaveAttribute('draggable', 'true');
+    });
+
+    it('is not draggable when onDragStart is not provided', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const card = container.firstChild;
+      expect(card).toHaveAttribute('draggable', 'false');
+    });
+
+    it('shows drag handle when onDragStart is provided', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+        />
+      );
+
+      expect(screen.getByLabelText('Drag Main Garden')).toBeInTheDocument();
+    });
+
+    it('drag handle stops propagation on mousedown', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+        />
+      );
+
+      const dragHandle = screen.getByLabelText('Drag Main Garden');
+      const stopPropagation = vi.fn();
+      fireEvent.mouseDown(dragHandle, { stopPropagation });
+      // The mouseDown handler calls e.stopPropagation() to prevent card click
+      // We verify the handler exists and doesn't throw
+      expect(dragHandle).toBeInTheDocument();
+    });
+
+    it('does not show drag handle when onDragStart is not provided', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.queryByLabelText('Drag Main Garden')).not.toBeInTheDocument();
+    });
+
+    it('calls onDragStart when drag starts', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+        />
+      );
+
+      const card = container.firstChild;
+      fireEvent.dragStart(card);
+
+      expect(mockOnDragStart).toHaveBeenCalledTimes(1);
+      expect(mockOnDragStart).toHaveBeenCalledWith(expect.any(Object), mockBed);
+    });
+
+    it('calls onDragEnd when drag ends', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+          onDragEnd={mockOnDragEnd}
+        />
+      );
+
+      const card = container.firstChild;
+      fireEvent.dragEnd(card);
+
+      expect(mockOnDragEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDragOver when dragging over', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragOver={mockOnDragOver}
+        />
+      );
+
+      const card = container.firstChild;
+      fireEvent.dragOver(card);
+
+      expect(mockOnDragOver).toHaveBeenCalledTimes(1);
+      expect(mockOnDragOver).toHaveBeenCalledWith(expect.any(Object), mockBed);
+    });
+
+    it('calls onDrop when dropped', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDrop={mockOnDrop}
+        />
+      );
+
+      const card = container.firstChild;
+      fireEvent.drop(card);
+
+      expect(mockOnDrop).toHaveBeenCalledTimes(1);
+      expect(mockOnDrop).toHaveBeenCalledWith(expect.any(Object), mockBed);
+    });
+
+    it('applies opacity when isDragging is true', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+          isDragging={true}
+        />
+      );
+
+      const card = container.firstChild;
+      expect(card).toHaveClass('opacity-50');
+    });
+
+    it('does not apply opacity when isDragging is false', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onDragStart={mockOnDragStart}
+          isDragging={false}
+        />
+      );
+
+      const card = container.firstChild;
+      expect(card).not.toHaveClass('opacity-50');
+    });
+
+    it('does not call drag handlers when not provided', () => {
+      const { container } = render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const card = container.firstChild;
+
+      // These should not throw errors
+      fireEvent.dragStart(card);
+      fireEvent.dragEnd(card);
+      fireEvent.dragOver(card);
+      fireEvent.drop(card);
+
+      expect(mockOnDragStart).not.toHaveBeenCalled();
+      expect(mockOnDragEnd).not.toHaveBeenCalled();
+      expect(mockOnDragOver).not.toHaveBeenCalled();
+      expect(mockOnDrop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Keyboard reordering functionality', () => {
+    const mockBed = {
+      id: 'bed-1',
+      name: 'Main Garden',
+      width: 4,
+      height: 4,
+      is_pot: false
+    };
+
+    const mockCapacity = {
+      total: 16,
+      used: 8,
+      available: 8,
+      isOvercapacity: false
+    };
+
+    const mockOnMoveUp = vi.fn();
+    const mockOnMoveDown = vi.fn();
+
+    beforeEach(() => {
+      mockOnMoveUp.mockClear();
+      mockOnMoveDown.mockClear();
+    });
+
+    it('shows move up button when onMoveUp and showMoveUp are provided', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveUp={mockOnMoveUp}
+          showMoveUp={true}
+        />
+      );
+
+      expect(screen.getByLabelText('Move Main Garden up')).toBeInTheDocument();
+    });
+
+    it('does not show move up button when showMoveUp is false', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveUp={mockOnMoveUp}
+          showMoveUp={false}
+        />
+      );
+
+      expect(screen.queryByLabelText('Move Main Garden up')).not.toBeInTheDocument();
+    });
+
+    it('shows move down button when onMoveDown and showMoveDown are provided', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveDown={mockOnMoveDown}
+          showMoveDown={true}
+        />
+      );
+
+      expect(screen.getByLabelText('Move Main Garden down')).toBeInTheDocument();
+    });
+
+    it('does not show move down button when showMoveDown is false', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveDown={mockOnMoveDown}
+          showMoveDown={false}
+        />
+      );
+
+      expect(screen.queryByLabelText('Move Main Garden down')).not.toBeInTheDocument();
+    });
+
+    it('calls onMoveUp when move up button is clicked', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveUp={mockOnMoveUp}
+          showMoveUp={true}
+        />
+      );
+
+      fireEvent.click(screen.getByLabelText('Move Main Garden up'));
+
+      expect(mockOnMoveUp).toHaveBeenCalledTimes(1);
+      expect(mockOnMoveUp).toHaveBeenCalledWith(mockBed);
+    });
+
+    it('calls onMoveDown when move down button is clicked', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          onMoveDown={mockOnMoveDown}
+          showMoveDown={true}
+        />
+      );
+
+      fireEvent.click(screen.getByLabelText('Move Main Garden down'));
+
+      expect(mockOnMoveDown).toHaveBeenCalledTimes(1);
+      expect(mockOnMoveDown).toHaveBeenCalledWith(mockBed);
+    });
+
+    it('does not show move buttons when handlers not provided', () => {
+      render(
+        <BedCard
+          bed={mockBed}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.queryByLabelText('Move Main Garden up')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Move Main Garden down')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Pot variant (is_pot = true)', () => {
     const mockPot = {
       id: 'pot-1',

@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { POT_SIZES } from '../utils/storage';
 import { getPlantById } from '../data/plantLibrary';
 
-function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete }) {
+function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete, onDragStart, onDragEnd, onDragOver, onDrop, isDragging, onMoveUp, onMoveDown, showMoveUp, showMoveDown }) {
   const isPot = bed.is_pot === true;
 
   const getCapacityColor = () => {
@@ -50,11 +50,55 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete }) {
     return plantNames;
   };
 
+  const handleDragStart = (e) => {
+    if (onDragStart) {
+      onDragStart(e, bed);
+    }
+  };
+
+  const handleDragEnd = (e) => {
+    if (onDragEnd) {
+      onDragEnd(e);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    if (onDragOver) {
+      onDragOver(e, bed);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (onDrop) {
+      onDrop(e, bed);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+    <div
+      className={`bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      draggable={onDragStart !== undefined}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="flex justify-between items-start mb-3">
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
+            {onDragStart && (
+              <button
+                className="cursor-move text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={`Drag ${bed.name}`}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                </svg>
+              </button>
+            )}
             <span className="text-2xl" role="img" aria-label={isPot ? 'pot' : 'bed'}>
               {isPot ? '🪴' : '🌱'}
             </span>
@@ -69,6 +113,28 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete }) {
           </p>
         </div>
         <div className="flex gap-2">
+          {onMoveUp && showMoveUp && (
+            <button
+              onClick={() => onMoveUp(bed)}
+              className="text-gray-500 hover:text-primary transition-colors"
+              aria-label={`Move ${bed.name} up`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+          )}
+          {onMoveDown && showMoveDown && (
+            <button
+              onClick={() => onMoveDown(bed)}
+              className="text-gray-500 hover:text-primary transition-colors"
+              aria-label={`Move ${bed.name} down`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => onEdit(bed)}
             className="text-gray-500 hover:text-primary transition-colors"
@@ -165,7 +231,16 @@ BedCard.propTypes = {
     })
   ),
   onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  onDragStart: PropTypes.func,
+  onDragEnd: PropTypes.func,
+  onDragOver: PropTypes.func,
+  onDrop: PropTypes.func,
+  isDragging: PropTypes.bool,
+  onMoveUp: PropTypes.func,
+  onMoveDown: PropTypes.func,
+  showMoveUp: PropTypes.bool,
+  showMoveDown: PropTypes.bool
 };
 
 export default BedCard;
