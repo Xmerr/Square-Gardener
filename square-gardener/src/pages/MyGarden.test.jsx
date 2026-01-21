@@ -64,11 +64,13 @@ describe('MyGarden', () => {
       lastWatered: new Date().toISOString(),
       notes: ''
     }));
-    storage.addGardenBed.mockImplementation((name, width, height) => ({
+    storage.addGardenBed.mockImplementation((name, width, height, options = {}) => ({
       id: `bed-${Date.now()}`,
       name,
       width,
       height,
+      is_pot: options.is_pot || false,
+      size: options.size,
       order: 0
     }));
     storage.removeGardenPlant.mockImplementation(() => []);
@@ -143,7 +145,19 @@ describe('MyGarden', () => {
       fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
       fireEvent.click(screen.getByText('Create Bed'));
 
-      expect(storage.addGardenBed).toHaveBeenCalledWith('Test Bed', 4, 4);
+      expect(storage.addGardenBed).toHaveBeenCalledWith('Test Bed', 4, 4, { is_pot: false });
+    });
+
+    it('creates pot and closes form', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Create Your First Bed'));
+
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test Pot' } });
+      fireEvent.click(screen.getByLabelText('This is a pot'));
+      fireEvent.change(screen.getByLabelText('Size'), { target: { value: 'large' } });
+      fireEvent.click(screen.getByText('Create Pot'));
+
+      expect(storage.addGardenBed).toHaveBeenCalledWith('Test Pot', null, null, { is_pot: true, size: 'large' });
     });
 
     it('closes bed form when cancelled', () => {

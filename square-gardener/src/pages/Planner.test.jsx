@@ -191,6 +191,23 @@ describe('Planner', () => {
     expect(button).toBeDisabled();
   });
 
+  it('shows tooltip on disabled Generate Plan button', () => {
+    render(<Planner />);
+    const button = screen.getByRole('button', { name: /Generate Plan/i });
+    expect(button).toHaveAttribute('title', 'Select plants above to generate a plan');
+  });
+
+  it('does not show tooltip on enabled Generate Plan button', () => {
+    render(<Planner />);
+
+    // Select plants to enable the button
+    const selectPlantsButton = screen.getByText('Mock Select Plants');
+    fireEvent.click(selectPlantsButton);
+
+    const button = screen.getByRole('button', { name: /Generate Plan/i });
+    expect(button).toHaveAttribute('title', '');
+  });
+
   it('shows error when generate plan clicked without bed', () => {
     storage.getGardenBeds.mockReturnValue([]);
     render(<Planner />);

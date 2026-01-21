@@ -152,6 +152,7 @@ function Planner() {
                   <button
                     onClick={handleGeneratePlan}
                     disabled={selectedPlants.length === 0}
+                    title={selectedPlants.length === 0 ? "Select plants above to generate a plan" : ""}
                     className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-light transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Generate Plan
