@@ -460,4 +460,161 @@ describe('FrostDateForm', () => {
       expect(screen.queryByText('Last spring frost date is required')).not.toBeInTheDocument();
     });
   });
+
+  describe('ZIP code validation', () => {
+    it('should show error when non-numeric characters are entered', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+    });
+
+    it('should show error when input exceeds 5 digits', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '123456' } });
+
+      expect(screen.getByText('ZIP code must be 5 digits or less')).toBeInTheDocument();
+    });
+
+    it('should not show error for valid numeric input', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '12345' } });
+
+      expect(screen.queryByText('ZIP code must contain only numbers')).not.toBeInTheDocument();
+      expect(screen.queryByText('ZIP code must be 5 digits or less')).not.toBeInTheDocument();
+    });
+
+    it('should not show error for empty input', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '12345' } });
+      fireEvent.change(zipInput, { target: { value: '' } });
+
+      expect(screen.queryByText('ZIP code must contain only numbers')).not.toBeInTheDocument();
+      expect(screen.queryByText('ZIP code must be 5 digits or less')).not.toBeInTheDocument();
+    });
+
+    it('should disable lookup button when there is a validation error', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      const lookupButton = screen.getByText('Look Up');
+
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+
+      expect(lookupButton).toBeDisabled();
+    });
+
+    it('should enable lookup button when input is valid', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      const lookupButton = screen.getByText('Look Up');
+
+      fireEvent.change(zipInput, { target: { value: '12345' } });
+
+      expect(lookupButton).not.toBeDisabled();
+    });
+
+    it('should show error with red border on input field', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+
+      expect(zipInput).toHaveClass('border-red-500');
+    });
+
+    it('should show normal border when input is valid', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '12345' } });
+
+      expect(zipInput).toHaveClass('border-gray-300');
+      expect(zipInput).not.toHaveClass('border-red-500');
+    });
+
+    it('should clear validation error when valid input is entered', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+
+      // Enter invalid input first
+      fireEvent.change(zipInput, { target: { value: 'abc' } });
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+
+      // Enter valid input
+      fireEvent.change(zipInput, { target: { value: '12345' } });
+      expect(screen.queryByText('ZIP code must contain only numbers')).not.toBeInTheDocument();
+    });
+
+    it('should not show lookup message when there is a validation error', () => {
+      frostDateLookup.lookupFrostDates.mockReturnValue({
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
+      });
+      frostDateLookup.isZipCodeSupported.mockReturnValue(true);
+
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+
+      // First do a successful lookup
+      fireEvent.change(zipInput, { target: { value: '10001' } });
+      fireEvent.click(screen.getByText('Look Up'));
+      expect(screen.getByText('Frost dates found for your area!')).toBeInTheDocument();
+
+      // Now enter invalid input
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+      expect(screen.queryByText('Frost dates found for your area!')).not.toBeInTheDocument();
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+    });
+
+    it('should clear validation error when clear button is clicked', () => {
+      frostDateStorage.getFrostDates.mockReturnValue({
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15',
+        zipCode: '10001'
+      });
+
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+
+      // Enter invalid input
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+
+      // Click clear
+      fireEvent.click(screen.getByText('Clear'));
+
+      expect(screen.queryByText('ZIP code must contain only numbers')).not.toBeInTheDocument();
+    });
+
+    it('should handle mixed alphanumeric input', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '123abc' } });
+
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+    });
+
+    it('should handle special characters in input', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '12-34' } });
+
+      expect(screen.getByText('ZIP code must contain only numbers')).toBeInTheDocument();
+    });
+  });
 });

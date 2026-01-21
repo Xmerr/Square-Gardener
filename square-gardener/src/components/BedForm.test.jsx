@@ -46,6 +46,16 @@ describe('BedForm', () => {
       expect(screen.getByText('0 sq ft')).toBeInTheDocument();
     });
 
+    it('has example-style placeholders for width and height', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      const widthInput = screen.getByLabelText('Width (ft)');
+      const heightInput = screen.getByLabelText('Height (ft)');
+
+      expect(widthInput).toHaveAttribute('placeholder', 'e.g., 4');
+      expect(heightInput).toHaveAttribute('placeholder', 'e.g., 4');
+    });
+
     it('shows 0 sq ft when dimensions are invalid', () => {
       render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 

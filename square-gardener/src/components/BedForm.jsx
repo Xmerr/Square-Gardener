@@ -149,7 +149,7 @@ function BedForm({ bed, onSubmit, onCancel }) {
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.width ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="4"
+              placeholder="e.g., 4"
             />
             {errors.width && (
               <p className="mt-1 text-sm text-red-500">{errors.width}</p>
@@ -169,7 +169,7 @@ function BedForm({ bed, onSubmit, onCancel }) {
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.height ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="4"
+              placeholder="e.g., 4"
             />
             {errors.height && (
               <p className="mt-1 text-sm text-red-500">{errors.height}</p>
