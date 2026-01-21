@@ -5,6 +5,7 @@ import MyGarden from './pages/MyGarden';
 import Watering from './pages/Watering';
 import Planner from './pages/Planner';
 import Calendar from './pages/Calendar';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/watering" element={<Watering />} />
             <Route path="/planner" element={<Planner />} />
             <Route path="/calendar" element={<Calendar />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 

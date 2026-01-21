@@ -21,6 +21,7 @@ function FrostDateForm({ onSave, initialFrostDates }) {
   const [zipCode, setZipCode] = useState(initialState.zipCode);
   const [errors, setErrors] = useState({});
   const [lookupMessage, setLookupMessage] = useState('');
+  const [zipError, setZipError] = useState('');
 
   const validateDates = () => {
     const newErrors = {};
@@ -45,6 +46,32 @@ function FrostDateForm({ onSave, initialFrostDates }) {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleZipChange = (e) => {
+    const value = e.target.value;
+    setZipCode(value);
+    setLookupMessage('');
+
+    // Validate ZIP code input
+    if (value === '') {
+      setZipError('');
+      return;
+    }
+
+    // Check for non-numeric characters
+    if (!/^\d*$/.test(value)) {
+      setZipError('ZIP code must contain only numbers');
+      return;
+    }
+
+    // Check length (max 5 digits for US ZIP codes)
+    if (value.length > 5) {
+      setZipError('ZIP code must be 5 digits or less');
+      return;
+    }
+
+    setZipError('');
   };
 
   const handleZipLookup = () => {
@@ -92,6 +119,7 @@ function FrostDateForm({ onSave, initialFrostDates }) {
     setZipCode('');
     setErrors({});
     setLookupMessage('');
+    setZipError('');
     saveFrostDates({
       lastSpringFrost: null,
       firstFallFrost: null,
@@ -130,20 +158,30 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               id="zip-code"
               type="text"
               value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
+              onChange={handleZipChange}
               placeholder="Enter ZIP code"
               maxLength={5}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+              className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${
+                zipError ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
             <button
               type="button"
               onClick={handleZipLookup}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={!!zipError}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                zipError
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
               Look Up
             </button>
           </div>
-          {lookupMessage && (
+          {zipError && (
+            <p className="mt-1 text-sm text-red-500">{zipError}</p>
+          )}
+          {!zipError && lookupMessage && (
             <p className={`mt-1 text-sm ${isZipCodeSupported(zipCode) ? 'text-green-600' : 'text-amber-600'}`}>
               {lookupMessage}
             </p>

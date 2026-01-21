@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import App from './App';
+
+vi.mock('./utils/storage', () => ({
+  getGardenPlants: vi.fn(() => [])
+}));
 
 describe('App', () => {
   beforeEach(() => {
@@ -37,5 +41,19 @@ describe('App', () => {
   it('renders the footer', () => {
     render(<App />);
     expect(screen.getByText(/Built with React/)).toBeInTheDocument();
+  });
+
+  it('renders 404 page for invalid routes', () => {
+    window.history.pushState({}, '', '/Square-Gardener/invalid-path');
+    render(<App />);
+    expect(screen.getByText('404')).toBeInTheDocument();
+    expect(screen.getByText('Page Not Found')).toBeInTheDocument();
+  });
+
+  it('renders 404 page with navigation options for non-existent routes', () => {
+    window.history.pushState({}, '', '/Square-Gardener/nonexistent');
+    render(<App />);
+    expect(screen.getByText('🏠 Go to Home')).toBeInTheDocument();
+    expect(screen.getByText('🌿 View My Garden')).toBeInTheDocument();
   });
 });
