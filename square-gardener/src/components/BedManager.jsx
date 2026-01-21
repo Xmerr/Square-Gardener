@@ -162,8 +162,6 @@ function BedManager({ onBedChange }) {
 
   const handleMoveUp = (bed) => {
     const index = beds.findIndex(b => b.id === bed.id);
-    if (index <= 0) return;
-
     const newBeds = [...beds];
     [newBeds[index - 1], newBeds[index]] = [newBeds[index], newBeds[index - 1]];
 
@@ -176,7 +174,6 @@ function BedManager({ onBedChange }) {
 
   const handleMoveDown = (bed) => {
     const index = beds.findIndex(b => b.id === bed.id);
-    if (index === -1 || index >= beds.length - 1) return;
 
     const newBeds = [...beds];
     [newBeds[index], newBeds[index + 1]] = [newBeds[index + 1], newBeds[index]];

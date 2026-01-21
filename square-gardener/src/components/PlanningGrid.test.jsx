@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PlanningGrid from './PlanningGrid';
+import * as planningAlgorithm from '../utils/planningAlgorithm';
 
 describe('PlanningGrid', () => {
   const mockArrangement = {
@@ -550,8 +551,16 @@ describe('PlanningGrid', () => {
       expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
     });
 
-    it('should show plant ID fallback when plant not found in validation', () => {
-      // Create arrangement with an unknown plant ID adjacent to another
+    it('should show plant ID fallback when plant not found in validation', async () => {
+      // Mock validateArrangement to return violations with unknown plant IDs
+      const validateSpy = vi.spyOn(planningAlgorithm, 'validateArrangement').mockReturnValue({
+        valid: false,
+        violations: [
+          { plantId: 'unknownplant1', enemyPlantId: 'unknownplant2', row: 0, col: 0 }
+        ]
+      });
+
+      // Create arrangement with unknown plant IDs
       const invalidArrangement = {
         grid: [
           ['unknownplant1', 'unknownplant2'],
@@ -578,8 +587,13 @@ describe('PlanningGrid', () => {
       fireEvent.dragStart(cell1);
       fireEvent.drop(emptyCell, { preventDefault: vi.fn() });
 
-      // Check that onArrangementChange was called
-      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      // The warning should display the plant IDs as fallback since getPlantById returns null
+      // The format is: "{plant?.name || v.plantId} at (row, col) is next to {enemy?.name || v.enemyPlantId}"
+      await waitFor(() => {
+        expect(screen.getByText(/unknownplant1 at \(0, 0\) is next to unknownplant2/)).toBeInTheDocument();
+      });
+
+      validateSpy.mockRestore();
     });
   });
 });

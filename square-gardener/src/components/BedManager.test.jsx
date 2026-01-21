@@ -437,8 +437,9 @@ describe('BedManager', () => {
       const firstBed = bedCards[0];
       const thirdBed = bedCards[2];
 
-      // Drag first bed
-      fireEvent.dragStart(firstBed);
+      // Drag first bed with a valid dataTransfer object
+      const dataTransfer = { effectAllowed: '' };
+      fireEvent.dragStart(firstBed, { dataTransfer });
 
       // Drop on third bed
       fireEvent.dragOver(thirdBed);
@@ -446,6 +447,7 @@ describe('BedManager', () => {
 
       expect(storage.reorderBeds).toHaveBeenCalledWith(['bed-2', 'bed-3', 'bed-1']);
       expect(mockOnBedChange).toHaveBeenCalled();
+      expect(dataTransfer.effectAllowed).toBe('move');
     });
 
     it('does not reorder when dropping on same bed', () => {

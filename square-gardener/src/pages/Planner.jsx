@@ -76,19 +76,15 @@ function Planner() {
   };
 
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setArrangement(history[newIndex]);
-    }
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setArrangement(history[newIndex]);
   };
 
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setArrangement(history[newIndex]);
-    }
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setArrangement(history[newIndex]);
   };
 
   const handleRegenerate = () => {

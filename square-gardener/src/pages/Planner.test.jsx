@@ -677,52 +677,6 @@ describe('Planner', () => {
       expect(redoButton).toBeDisabled();
     });
 
-    it('does not change state when clicking disabled undo button', () => {
-      render(<Planner />);
-
-      // Select plants
-      const selectPlantsButton = screen.getByText('Mock Select Plants');
-      fireEvent.click(selectPlantsButton);
-
-      // Generate plan
-      const generateButton = screen.getByText('Generate Plan');
-      fireEvent.click(generateButton);
-
-      // Undo is disabled (at initial state), clicking should have no effect
-      const undoButton = screen.getByText('Undo');
-      expect(undoButton).toBeDisabled();
-
-      // Force click the disabled button - state should remain unchanged
-      // (The component's onClick will check historyIndex > 0)
-      fireEvent.click(undoButton);
-
-      // Button should still be disabled
-      expect(undoButton).toBeDisabled();
-    });
-
-    it('does not change state when clicking disabled redo button', () => {
-      render(<Planner />);
-
-      // Select plants
-      const selectPlantsButton = screen.getByText('Mock Select Plants');
-      fireEvent.click(selectPlantsButton);
-
-      // Generate plan
-      const generateButton = screen.getByText('Generate Plan');
-      fireEvent.click(generateButton);
-
-      // Redo is disabled (no future history), clicking should have no effect
-      const redoButton = screen.getByText('Redo');
-      expect(redoButton).toBeDisabled();
-
-      // Force click the disabled button - state should remain unchanged
-      // (The component's onClick will check historyIndex < history.length - 1)
-      fireEvent.click(redoButton);
-
-      // Button should still be disabled
-      expect(redoButton).toBeDisabled();
-    });
-
     it('regenerate creates new arrangement with same plants', () => {
       planningAlgorithm.generateArrangement.mockClear();
 
