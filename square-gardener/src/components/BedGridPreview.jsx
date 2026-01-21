@@ -38,30 +38,68 @@ function BedGridPreview({ width, height, plants, plantLibrary }) {
     const grid = Array(Math.ceil(visualHeight)).fill(null).map(() =>
       Array(Math.ceil(visualWidth)).fill(null)
     );
+    const plantInstanceMap = Array(Math.ceil(visualHeight)).fill(null).map(() =>
+      Array(Math.ceil(visualWidth)).fill(null)
+    );
 
     let squareIndex = 0;
     const totalSquares = Math.ceil(visualWidth) * Math.ceil(visualHeight);
+    let instanceCounter = 0;
 
     for (const gardenPlant of plants) {
       const plantInfo = plantLibrary.find(p => p.id === gardenPlant.plantId);
       if (!plantInfo) continue;
 
       const squaresNeeded = Math.ceil((gardenPlant.quantity || 1) * plantInfo.squaresPerPlant);
+      const isLargePlant = plantInfo.squaresPerPlant > 1;
 
       for (let i = 0; i < squaresNeeded && squareIndex < totalSquares; i++) {
         const row = Math.floor(squareIndex / Math.ceil(visualWidth));
         const col = squareIndex % Math.ceil(visualWidth);
         grid[row][col] = gardenPlant.plantId;
+
+        // Track plant instances for large plants
+        if (isLargePlant && i % Math.ceil(plantInfo.squaresPerPlant) === 0) {
+          instanceCounter++;
+        }
+
+        if (isLargePlant) {
+          plantInstanceMap[row][col] = {
+            instanceId: instanceCounter,
+            squaresPerPlant: plantInfo.squaresPerPlant,
+            indexInPlant: i % Math.ceil(plantInfo.squaresPerPlant)
+          };
+        }
+
         squareIndex++;
       }
     }
 
-    return grid;
+    return { grid, plantInstanceMap };
   };
 
-  const grid = buildGridData();
+  const { grid, plantInstanceMap } = buildGridData();
   const cellSize = visualWidth > 6 ? 'w-4 h-4' : 'w-6 h-6';
   const fontSize = visualWidth > 6 ? 'text-xs' : 'text-sm';
+
+  const getLargePlantBorderClasses = (rowIndex, colIndex) => {
+    const { instanceId } = plantInstanceMap[rowIndex][colIndex];
+    const borders = [];
+
+    // Check if adjacent cells are part of the same plant instance
+    const isTopSameInstance = rowIndex > 0 && plantInstanceMap[rowIndex - 1][colIndex]?.instanceId === instanceId;
+    const isBottomSameInstance = rowIndex < plantInstanceMap.length - 1 && plantInstanceMap[rowIndex + 1][colIndex]?.instanceId === instanceId;
+    const isLeftSameInstance = colIndex > 0 && plantInstanceMap[rowIndex][colIndex - 1]?.instanceId === instanceId;
+    const isRightSameInstance = colIndex < plantInstanceMap[rowIndex].length - 1 && plantInstanceMap[rowIndex][colIndex + 1]?.instanceId === instanceId;
+
+    // Add borders only where not connected to same instance
+    if (!isTopSameInstance) borders.push('border-t-2');
+    if (!isBottomSameInstance) borders.push('border-b-2');
+    if (!isLeftSameInstance) borders.push('border-l-2');
+    if (!isRightSameInstance) borders.push('border-r-2');
+
+    return borders.join(' ') + ' border-purple-700';
+  };
 
   if (plants.length === 0) {
     return (
@@ -78,17 +116,30 @@ function BedGridPreview({ width, height, plants, plantLibrary }) {
         style={{ gridTemplateColumns: `repeat(${Math.ceil(visualWidth)}, minmax(0, 1fr))` }}
       >
         {grid.map((row, rowIndex) =>
-          row.map((cell, colIndex) => (
-            <div
-              key={`${rowIndex}-${colIndex}`}
-              className={`${cellSize} ${fontSize} rounded-sm flex items-center justify-center ${
-                cell ? getPlantColor(cell) : 'bg-white'
-              }`}
-              title={cell ? cell : 'Empty'}
-            >
-              {cell && <span>{getPlantEmoji(cell)}</span>}
-            </div>
-          ))
+          row.map((cell, colIndex) => {
+            const instanceData = plantInstanceMap[rowIndex][colIndex];
+            const isLargePlant = instanceData !== null;
+            const borderClasses = isLargePlant ? getLargePlantBorderClasses(rowIndex, colIndex) : '';
+            const patternClasses = isLargePlant ? 'bg-gradient-to-br from-purple-200 to-purple-100' : '';
+            const showLabel = isLargePlant && instanceData.indexInPlant === 0;
+
+            return (
+              <div
+                key={`${rowIndex}-${colIndex}`}
+                className={`${cellSize} ${fontSize} rounded-sm flex items-center justify-center relative ${
+                  cell ? (isLargePlant ? patternClasses : getPlantColor(cell)) : 'bg-white'
+                } ${borderClasses}`}
+                title={cell ? (isLargePlant ? `${cell} (Takes ${Math.ceil(instanceData.squaresPerPlant)} squares)` : cell) : 'Empty'}
+              >
+                {cell && !isLargePlant && <span>{getPlantEmoji(cell)}</span>}
+                {showLabel && (
+                  <span className="text-[0.5rem] font-bold text-purple-900">
+                    {Math.ceil(instanceData.squaresPerPlant)}sq
+                  </span>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
       {isScaled && (
