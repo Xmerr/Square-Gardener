@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { getPlantById } from '../data/plantLibrary';
 import { validateArrangement } from '../utils/planningAlgorithm';
+import { getSquareCompanionStatus } from '../utils/companionStatus';
 
 const PLANT_COLORS = {
   tomato: '#ef4444',
@@ -181,6 +182,26 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                 const displayName = plant ? plant.name : (plantId || 'Empty');
                 const displayInitial = plant ? plant.name.charAt(0).toUpperCase() : (plantId ? plantId.charAt(0).toUpperCase() : '');
 
+                // Get companion/enemy status for visual tints
+                const companionStatus = getSquareCompanionStatus(grid, rowIndex, colIndex);
+
+                // Build tooltip with companion/enemy information
+                let tooltip = `${displayName} (${rowIndex}, ${colIndex})`;
+                if (companionStatus.companions.length > 0) {
+                  tooltip += `\nCompanions: ${companionStatus.companions.join(', ')}`;
+                }
+                if (companionStatus.enemies.length > 0) {
+                  tooltip += `\nWarning: near ${companionStatus.enemies.join(', ')} (incompatible)`;
+                }
+
+                // Determine box shadow for companion/enemy tint (enemy takes precedence)
+                let boxShadow = 'none';
+                if (companionStatus.hasEnemy) {
+                  boxShadow = 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)';
+                } else if (companionStatus.hasCompanion) {
+                  boxShadow = 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)';
+                }
+
                 return (
                   <button
                     key={`${rowIndex}-${colIndex}`}
@@ -193,8 +214,8 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                     className={`${cellSize} rounded flex items-center justify-center font-medium transition-transform hover:scale-105 relative ${
                       isLocked ? 'ring-2 ring-gray-400' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''} ${editable && plantId && !isLocked ? 'cursor-move' : ''}`}
-                    style={{ backgroundColor: bgColor, color: textColor }}
-                    title={`${displayName} (${rowIndex}, ${colIndex})`}
+                    style={{ backgroundColor: bgColor, color: textColor, boxShadow }}
+                    title={tooltip}
                   >
                     {displayInitial}
                     {isLocked && (
@@ -223,6 +244,29 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                   <span className="text-xs text-gray-500">×{count}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Companion Planting Legend */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Companion Indicators</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded border border-gray-300"
+                    style={{ backgroundColor: '#d1d5db', boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-gray-600">Good companion nearby</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded border border-gray-300"
+                    style={{ backgroundColor: '#d1d5db', boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-gray-600">Incompatible plant nearby</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

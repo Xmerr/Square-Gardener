@@ -125,7 +125,7 @@ describe('PlanningGrid', () => {
     it('should call onSquareClick when clicking a filled square', () => {
       render(<PlanningGrid {...defaultProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       fireEvent.click(tomatoCell);
 
       expect(defaultProps.onSquareClick).toHaveBeenCalledWith({
@@ -152,7 +152,7 @@ describe('PlanningGrid', () => {
     it('should work without onSquareClick prop', () => {
       render(<PlanningGrid arrangement={mockArrangement} bed={mockBed} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       fireEvent.click(tomatoCell);
 
       // Should not throw error
@@ -185,7 +185,7 @@ describe('PlanningGrid', () => {
     it('should apply correct background colors to plant cells', () => {
       render(<PlanningGrid {...defaultProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(tomatoCell).toHaveStyle({ backgroundColor: 'rgb(239, 68, 68)' }); // Tomato red
     });
 
@@ -223,7 +223,7 @@ describe('PlanningGrid', () => {
     it('should use light text color for dark backgrounds', () => {
       render(<PlanningGrid {...defaultProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(tomatoCell).toHaveStyle({ color: 'rgb(255, 255, 255)' }); // Light text
     });
   });
@@ -242,8 +242,8 @@ describe('PlanningGrid', () => {
     it('should show plant name and position in tooltip for filled cells', () => {
       render(<PlanningGrid {...defaultProps} />);
 
-      expect(screen.getByTitle('Tomato (0, 0)')).toBeInTheDocument();
-      expect(screen.getByTitle('Basil (0, 1)')).toBeInTheDocument();
+      expect(screen.getByTitle(/^Tomato \(0, 0\)/)).toBeInTheDocument();
+      expect(screen.getByTitle(/^Basil \(0, 1\)/)).toBeInTheDocument();
     });
 
     it('should show Empty and position in tooltip for empty cells', () => {
@@ -301,14 +301,14 @@ describe('PlanningGrid', () => {
     it('should make plant cells draggable when editable is true', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(tomatoCell).toHaveAttribute('draggable', 'true');
     });
 
     it('should not make cells draggable when editable is false', () => {
       render(<PlanningGrid {...defaultProps} editable={false} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(tomatoCell).toHaveAttribute('draggable', 'false');
     });
 
@@ -328,15 +328,15 @@ describe('PlanningGrid', () => {
       ];
       render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
 
-      const lockedCell = screen.getByTitle('Tomato (0, 0)');
+      const lockedCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(lockedCell).toHaveAttribute('draggable', 'false');
     });
 
     it('should call onArrangementChange when plants are swapped', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
-      const basilCell = screen.getByTitle('Basil (0, 1)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const basilCell = screen.getByTitle(/^Basil \(0, 1\)/);
 
       // Simulate drag and drop
       fireEvent.dragStart(tomatoCell);
@@ -352,7 +352,7 @@ describe('PlanningGrid', () => {
     it('should swap plant with empty square', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       const emptyCell = screen.getByTitle('Empty (1, 1)');
 
       fireEvent.dragStart(tomatoCell);
@@ -372,7 +372,7 @@ describe('PlanningGrid', () => {
       ];
       render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       const lockedCell = screen.getByTitle('Empty (1, 1)');
 
       fireEvent.dragStart(tomatoCell);
@@ -385,7 +385,7 @@ describe('PlanningGrid', () => {
     it('should not allow dropping on same square', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
 
       fireEvent.dragStart(tomatoCell);
       fireEvent.dragOver(tomatoCell, { preventDefault: vi.fn() });
@@ -398,8 +398,8 @@ describe('PlanningGrid', () => {
       const propsWithoutHandler = { ...editableProps, onArrangementChange: undefined };
       render(<PlanningGrid {...propsWithoutHandler} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
-      const basilCell = screen.getByTitle('Basil (0, 1)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const basilCell = screen.getByTitle(/^Basil \(0, 1\)/);
 
       fireEvent.dragStart(tomatoCell);
       fireEvent.dragOver(basilCell, { preventDefault: vi.fn() });
@@ -436,7 +436,7 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid {...editableProps} />);
 
       // Trigger a drop to cause validation
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       const emptyCell = screen.getByTitle('Empty (1, 0)');
 
       fireEvent.dragStart(tomatoCell);
@@ -456,8 +456,8 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid {...editableProps} />);
 
       // Swap tomato with carrot (both compatible)
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
-      const carrotCell = screen.getByTitle('Carrot (1, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const carrotCell = screen.getByTitle(/^Carrot \(1, 0\)/);
 
       fireEvent.dragStart(tomatoCell);
       fireEvent.drop(carrotCell, { preventDefault: vi.fn() });
@@ -484,7 +484,7 @@ describe('PlanningGrid', () => {
     it('should apply cursor-move class to draggable cells', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(tomatoCell).toHaveClass('cursor-move');
     });
 
@@ -502,14 +502,14 @@ describe('PlanningGrid', () => {
       ];
       render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
 
-      const lockedCell = screen.getByTitle('Tomato (0, 0)');
+      const lockedCell = screen.getByTitle(/^Tomato \(0, 0\)/);
       expect(lockedCell).not.toHaveClass('cursor-move');
     });
 
     it('should handle drag end event', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
 
       // Start dragging
       fireEvent.dragStart(tomatoCell);
@@ -530,7 +530,7 @@ describe('PlanningGrid', () => {
 
       render(<PlanningGrid {...nonEditableProps} />);
 
-      const tomatoCell = screen.getByTitle('Tomato (0, 0)');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
 
       // Try to start dragging
       fireEvent.dragStart(tomatoCell);
@@ -542,7 +542,7 @@ describe('PlanningGrid', () => {
     it('should not handle drag over when no drag in progress', () => {
       render(<PlanningGrid {...editableProps} />);
 
-      const basilCell = screen.getByTitle('Basil (0, 1)');
+      const basilCell = screen.getByTitle(/^Basil \(0, 1\)/);
 
       // Try to drag over without starting a drag first
       fireEvent.dragOver(basilCell, { preventDefault: vi.fn() });
@@ -594,6 +594,191 @@ describe('PlanningGrid', () => {
       });
 
       validateSpy.mockRestore();
+    });
+  });
+
+  describe('companion planting legend', () => {
+    it('should render companion indicators legend when plants are present', () => {
+      render(<PlanningGrid {...defaultProps} />);
+
+      expect(screen.getByText('Companion Indicators')).toBeInTheDocument();
+      expect(screen.getByText('Good companion nearby')).toBeInTheDocument();
+      expect(screen.getByText('Incompatible plant nearby')).toBeInTheDocument();
+    });
+
+    it('should not render legend when no plants in grid', () => {
+      const emptyArrangement = {
+        grid: [[null, null], [null, null]],
+        placements: [],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={emptyArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      expect(screen.queryByText('Companion Indicators')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('companion visual tints', () => {
+    it('should apply green tint to square with companion nearby', () => {
+      // Tomato and basil are companions
+      const companionArrangement = {
+        grid: [
+          ['tomato', 'basil'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'basil', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      // Both tomato and basil should have green tint (box-shadow)
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const basilCell = screen.getByTitle(/^Basil \(0, 1\)/);
+
+      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' });
+      expect(basilCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' });
+    });
+
+    it('should apply red tint to square with enemy nearby', () => {
+      // Tomato and cabbage are enemies
+      const enemyArrangement = {
+        grid: [
+          ['tomato', 'cabbage'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'cabbage', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={enemyArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const cabbageCell = screen.getByTitle(/^Cabbage \(0, 1\)/);
+
+      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
+      expect(cabbageCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
+    });
+
+    it('should apply red tint when both companion and enemy are nearby (red takes precedence)', () => {
+      // Tomato with basil (companion) and cabbage (enemy)
+      const mixedArrangement = {
+        grid: [
+          ['basil', 'tomato', 'cabbage']
+        ],
+        placements: [
+          { plantId: 'basil', row: 0, col: 0 },
+          { plantId: 'tomato', row: 0, col: 1 },
+          { plantId: 'cabbage', row: 0, col: 2 }
+        ],
+        success: true
+      };
+      const wideBed = { width: 3, height: 1, id: 'wide', name: 'Wide' };
+
+      render(<PlanningGrid arrangement={mixedArrangement} bed={wideBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 1\)/);
+      // Red tint should take precedence
+      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
+    });
+
+    it('should not apply tint to empty squares', () => {
+      render(<PlanningGrid {...defaultProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+      expect(emptyCell).toHaveStyle({ boxShadow: 'none' });
+    });
+
+    it('should not apply tint to squares with no companions or enemies nearby', () => {
+      // Single tomato with no adjacent plants
+      const isolatedArrangement = {
+        grid: [
+          ['tomato', null, null],
+          [null, null, null],
+          [null, null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 }
+        ],
+        success: true
+      };
+      const largeBed = { width: 3, height: 3, id: 'large', name: 'Large' };
+
+      render(<PlanningGrid arrangement={isolatedArrangement} bed={largeBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      expect(tomatoCell).toHaveStyle({ boxShadow: 'none' });
+    });
+  });
+
+  describe('enhanced tooltips', () => {
+    it('should show companion plants in tooltip', () => {
+      // Tomato and basil are companions
+      const companionArrangement = {
+        grid: [
+          ['tomato', 'basil'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'basil', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)[\s\S]*Companions: Basil/);
+      expect(tomatoCell).toBeInTheDocument();
+    });
+
+    it('should show enemy plants in tooltip', () => {
+      // Tomato and cabbage are enemies
+      const enemyArrangement = {
+        grid: [
+          ['tomato', 'cabbage'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'cabbage', row: 0, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={enemyArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)[\s\S]*Warning: near Cabbage \(incompatible\)/);
+      expect(tomatoCell).toBeInTheDocument();
+    });
+
+    it('should show both companions and enemies in tooltip', () => {
+      // Tomato with basil (companion) and cabbage (enemy)
+      const mixedArrangement = {
+        grid: [
+          ['basil', 'tomato', 'cabbage']
+        ],
+        placements: [
+          { plantId: 'basil', row: 0, col: 0 },
+          { plantId: 'tomato', row: 0, col: 1 },
+          { plantId: 'cabbage', row: 0, col: 2 }
+        ],
+        success: true
+      };
+      const wideBed = { width: 3, height: 1, id: 'wide', name: 'Wide' };
+
+      render(<PlanningGrid arrangement={mixedArrangement} bed={wideBed} onSquareClick={vi.fn()} />);
+
+      // Tooltip should show both companion and enemy info
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 1\)[\s\S]*Companions: Basil[\s\S]*Warning: near Cabbage/);
+      expect(tomatoCell).toBeInTheDocument();
     });
   });
 });
