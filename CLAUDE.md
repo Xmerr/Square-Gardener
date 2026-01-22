@@ -131,7 +131,7 @@ When modifying existing code:
 ## Project Structure
 
 ```
-square-gardener/
+./
 ├── src/
 │   ├── components/     # Reusable UI components
 │   ├── pages/          # Page components

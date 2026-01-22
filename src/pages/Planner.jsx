@@ -31,7 +31,7 @@ function Planner() {
     }
   };
 
-  const handlePlantsSelected = (plants) => {
+  const handleSelectionChange = (plants) => {
     setSelectedPlants(plants);
     setError(null);
   };
@@ -137,9 +137,9 @@ function Planner() {
             {selectedBed && (
               <>
                 <PlantSelector
-                  selectedPlants={selectedPlants}
-                  onPlantsSelected={handlePlantsSelected}
-                  availableSquares={selectedBed.width * selectedBed.height}
+                  availableSpace={selectedBed.width * selectedBed.height}
+                  onSelectionChange={handleSelectionChange}
+                  initialSelections={null}
                 />
 
                 {error && (

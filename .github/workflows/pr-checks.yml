@@ -35,23 +35,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: './square-gardener/package-lock.json'
+          cache-dependency-path: './package-lock.json'
 
       - name: Install dependencies
-        working-directory: ./square-gardener
         run: npm ci
 
       - name: Run linting
-        working-directory: ./square-gardener
         run: npm run lint
 
       - name: Run tests with coverage
-        working-directory: ./square-gardener
         run: npm run test:ci
 
       - name: Generate coverage badge and summary
         if: success()
-        working-directory: ./square-gardener
         run: |
           echo "## Test Coverage Report ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -65,7 +61,6 @@ jobs:
 
       - name: Coverage failure summary
         if: failure()
-        working-directory: ./square-gardener
         run: |
           echo "## Test Coverage Report ❌" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -80,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: ./square-gardener/coverage/
+          path: ./coverage/
           retention-days: 30
 
   notify-result:
