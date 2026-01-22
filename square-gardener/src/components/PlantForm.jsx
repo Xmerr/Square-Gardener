@@ -95,6 +95,36 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
     return capacities;
   }, [beds]);
 
+  const validateField = (fieldName, value) => {
+    if (fieldName === 'plantId') {
+      return (!isEditMode && !value) ? 'Please select a plant' : null;
+    }
+    if (fieldName === 'quantity') {
+      const quantityNum = parseInt(value, 10);
+      if (!value || isNaN(quantityNum)) return 'Quantity is required';
+      if (quantityNum <= 0) return 'Quantity must be greater than 0';
+      return null;
+    }
+    if (fieldName === 'plantDate') {
+      return !value ? 'Plant date is required' : null;
+    }
+    if (fieldName === 'daysToMaturityOverride') {
+      if (!value) return null;
+      const daysNum = parseInt(value, 10);
+      if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
+        return 'Must be between 1 and 365 days';
+      }
+      return null;
+    }
+    // fieldName === 'spacePerPlantOverride'
+    if (!value) return null;
+    const spaceNum = parseFloat(value);
+    if (isNaN(spaceNum) || spaceNum < 0.01 || spaceNum > 10) {
+      return 'Must be between 0.01 and 10';
+    }
+    return null;
+  };
+
   const validate = () => {
     const newErrors = {};
 
@@ -175,7 +205,20 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
           <select
             id="plant-type"
             value={plantId}
-            onChange={(e) => setPlantId(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setPlantId(newValue);
+              if (errors.plantId) {
+                const error = validateField('plantId', newValue);
+                if (!error) {
+                  setErrors(prev => {
+                    const next = { ...prev };
+                    delete next.plantId;
+                    return next;
+                  });
+                }
+              }
+            }}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
               errors.plantId ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -213,7 +256,9 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
             id="bed-select"
             value={bedId}
             onChange={(e) => setBedId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+              errors.bedId ? 'border-red-500' : 'border-gray-300'
+            }`}
           >
             {beds.map((bed) => {
               const capacity = bedCapacities[bed.id];
@@ -224,6 +269,9 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
               );
             })}
           </select>
+        )}
+        {errors.bedId && (
+          <p className="mt-1 text-sm text-red-500">{errors.bedId}</p>
         )}
       </div>
 
@@ -251,7 +299,20 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
           id="plant-date"
           type="date"
           value={plantDate}
-          onChange={(e) => setPlantDate(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setPlantDate(newValue);
+            if (errors.plantDate) {
+              const error = validateField('plantDate', newValue);
+              if (!error) {
+                setErrors(prev => {
+                  const next = { ...prev };
+                  delete next.plantDate;
+                  return next;
+                });
+              }
+            }
+          }}
           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
             errors.plantDate ? 'border-red-500' : 'border-gray-300'
           }`}
@@ -271,7 +332,20 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
           type="number"
           min="1"
           value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setQuantity(newValue);
+            if (errors.quantity) {
+              const error = validateField('quantity', newValue);
+              if (!error) {
+                setErrors(prev => {
+                  const next = { ...prev };
+                  delete next.quantity;
+                  return next;
+                });
+              }
+            }
+          }}
           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
             errors.quantity ? 'border-red-500' : 'border-gray-300'
           }`}
@@ -321,7 +395,20 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
               min="1"
               max="365"
               value={daysToMaturityOverride}
-              onChange={(e) => setDaysToMaturityOverride(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setDaysToMaturityOverride(newValue);
+                if (errors.daysToMaturityOverride) {
+                  const error = validateField('daysToMaturityOverride', newValue);
+                  if (!error) {
+                    setErrors(prev => {
+                      const next = { ...prev };
+                      delete next.daysToMaturityOverride;
+                      return next;
+                    });
+                  }
+                }
+              }}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.daysToMaturityOverride ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -348,7 +435,20 @@ function PlantForm({ mode, plant, onSubmit, onCancel }) {
               max="10"
               step="0.01"
               value={spacePerPlantOverride}
-              onChange={(e) => setSpacePerPlantOverride(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setSpacePerPlantOverride(newValue);
+                if (errors.spacePerPlantOverride) {
+                  const error = validateField('spacePerPlantOverride', newValue);
+                  if (!error) {
+                    setErrors(prev => {
+                      const next = { ...prev };
+                      delete next.spacePerPlantOverride;
+                      return next;
+                    });
+                  }
+                }
+              }}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.spacePerPlantOverride ? 'border-red-500' : 'border-gray-300'
               }`}

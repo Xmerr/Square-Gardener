@@ -80,6 +80,34 @@ describe('Home', () => {
     });
   });
 
+  describe('stat card navigation', () => {
+    it('total plants card links to my-garden', () => {
+      renderHome();
+      const totalPlantsCard = screen.getByText('Total Plants').closest('a');
+      expect(totalPlantsCard).toHaveAttribute('href', '/my-garden');
+    });
+
+    it('need water card links to watering', () => {
+      renderHome();
+      const needWaterCard = screen.getByText('Need Water').closest('a');
+      expect(needWaterCard).toHaveAttribute('href', '/watering');
+    });
+
+    it('ready to harvest card links to my-garden', () => {
+      renderHome();
+      const readyToHarvestCard = screen.getByText('Ready to Harvest').closest('a');
+      expect(readyToHarvestCard).toHaveAttribute('href', '/my-garden');
+    });
+
+    it('stat cards have hover styles', () => {
+      renderHome();
+      const totalPlantsCard = screen.getByText('Total Plants').closest('a');
+      expect(totalPlantsCard).toHaveClass('hover:shadow-xl');
+      expect(totalPlantsCard).toHaveClass('hover:scale-105');
+      expect(totalPlantsCard).toHaveClass('cursor-pointer');
+    });
+  });
+
   describe('empty garden state', () => {
     it('shows getting started section when no plants', () => {
       renderHome();
@@ -95,6 +123,37 @@ describe('Home', () => {
       renderHome();
       const zeros = screen.getAllByText('0');
       expect(zeros.length).toBe(3); // Total, Need Water, Ready to Harvest
+    });
+
+    it('shows prominent getting started section with enhanced styling', () => {
+      renderHome();
+      const heading = screen.getByText('Get Started with Square Gardening');
+      const section = heading.closest('div.bg-gradient-to-br');
+      expect(section).toBeInTheDocument();
+      expect(section).toHaveClass('bg-gradient-to-br', 'from-green-50', 'to-emerald-50', 'border-2', 'border-primary');
+    });
+
+    it('shows animated icon in getting started section', () => {
+      renderHome();
+      const heading = screen.getByText('Get Started with Square Gardening');
+      const section = heading.closest('div.bg-gradient-to-br');
+      const icon = section?.querySelector('.animate-bounce');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('shows enhanced call-to-action button', () => {
+      renderHome();
+      const button = screen.getByText('Add Your First Plant').closest('a');
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveClass('inline-flex', 'items-center', 'gap-2', 'bg-primary', 'hover:bg-primary-light');
+    });
+
+    it('add first plant button includes icon', () => {
+      renderHome();
+      const button = screen.getByText('Add Your First Plant').closest('a');
+      const icon = button?.querySelector('.text-2xl');
+      expect(icon).toBeInTheDocument();
+      expect(icon?.textContent).toBe('🌿');
     });
   });
 

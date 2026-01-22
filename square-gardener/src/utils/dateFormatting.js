@@ -98,3 +98,31 @@ export const isBeforeInYear = (date1, date2) => {
   }
   return day1 < day2;
 };
+
+/**
+ * Get the current season based on month
+ * Spring: March, April, May (months 3-5)
+ * Summer: June, July, August (months 6-8)
+ * Fall: September, October, November (months 9-11)
+ * Winter: December, January, February (months 12, 1-2)
+ * @param {Date} [date] - Optional date to check (defaults to current date)
+ * @returns {string} Season name: 'spring', 'summer', 'fall', or 'winter'
+ */
+export const getCurrentSeason = (date = new Date()) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    date = new Date();
+  }
+
+  const month = date.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+
+  if (month >= 3 && month <= 5) {
+    return 'spring';
+  }
+  if (month >= 6 && month <= 8) {
+    return 'summer';
+  }
+  if (month >= 9 && month <= 11) {
+    return 'fall';
+  }
+  return 'winter'; // December (12), January (1), February (2)
+};
