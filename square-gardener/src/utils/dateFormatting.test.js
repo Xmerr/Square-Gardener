@@ -3,7 +3,8 @@ import {
   formatMonthDay,
   convertToMonthDay,
   isValidMonthDay,
-  isBeforeInYear
+  isBeforeInYear,
+  getCurrentSeason
 } from './dateFormatting';
 
 describe('dateFormatting', () => {
@@ -152,6 +153,71 @@ describe('dateFormatting', () => {
       expect(isBeforeInYear('04-15', 'invalid')).toBe(false);
       expect(isBeforeInYear('', '04-15')).toBe(false);
       expect(isBeforeInYear('04-15', '')).toBe(false);
+    });
+  });
+
+  describe('getCurrentSeason', () => {
+    it('should return spring for March, April, May', () => {
+      expect(getCurrentSeason(new Date(2024, 2, 1))).toBe('spring'); // March 1
+      expect(getCurrentSeason(new Date(2024, 2, 15))).toBe('spring'); // March 15
+      expect(getCurrentSeason(new Date(2024, 2, 31))).toBe('spring'); // March 31
+      expect(getCurrentSeason(new Date(2024, 3, 1))).toBe('spring'); // April 1
+      expect(getCurrentSeason(new Date(2024, 3, 15))).toBe('spring'); // April 15
+      expect(getCurrentSeason(new Date(2024, 3, 30))).toBe('spring'); // April 30
+      expect(getCurrentSeason(new Date(2024, 4, 1))).toBe('spring'); // May 1
+      expect(getCurrentSeason(new Date(2024, 4, 15))).toBe('spring'); // May 15
+      expect(getCurrentSeason(new Date(2024, 4, 31))).toBe('spring'); // May 31
+    });
+
+    it('should return summer for June, July, August', () => {
+      expect(getCurrentSeason(new Date(2024, 5, 1))).toBe('summer'); // June 1
+      expect(getCurrentSeason(new Date(2024, 5, 15))).toBe('summer'); // June 15
+      expect(getCurrentSeason(new Date(2024, 5, 30))).toBe('summer'); // June 30
+      expect(getCurrentSeason(new Date(2024, 6, 1))).toBe('summer'); // July 1
+      expect(getCurrentSeason(new Date(2024, 6, 15))).toBe('summer'); // July 15
+      expect(getCurrentSeason(new Date(2024, 6, 31))).toBe('summer'); // July 31
+      expect(getCurrentSeason(new Date(2024, 7, 1))).toBe('summer'); // August 1
+      expect(getCurrentSeason(new Date(2024, 7, 15))).toBe('summer'); // August 15
+      expect(getCurrentSeason(new Date(2024, 7, 31))).toBe('summer'); // August 31
+    });
+
+    it('should return fall for September, October, November', () => {
+      expect(getCurrentSeason(new Date(2024, 8, 1))).toBe('fall'); // September 1
+      expect(getCurrentSeason(new Date(2024, 8, 15))).toBe('fall'); // September 15
+      expect(getCurrentSeason(new Date(2024, 8, 30))).toBe('fall'); // September 30
+      expect(getCurrentSeason(new Date(2024, 9, 1))).toBe('fall'); // October 1
+      expect(getCurrentSeason(new Date(2024, 9, 15))).toBe('fall'); // October 15
+      expect(getCurrentSeason(new Date(2024, 9, 31))).toBe('fall'); // October 31
+      expect(getCurrentSeason(new Date(2024, 10, 1))).toBe('fall'); // November 1
+      expect(getCurrentSeason(new Date(2024, 10, 15))).toBe('fall'); // November 15
+      expect(getCurrentSeason(new Date(2024, 10, 30))).toBe('fall'); // November 30
+    });
+
+    it('should return winter for December, January, February', () => {
+      expect(getCurrentSeason(new Date(2024, 11, 1))).toBe('winter'); // December 1
+      expect(getCurrentSeason(new Date(2024, 11, 15))).toBe('winter'); // December 15
+      expect(getCurrentSeason(new Date(2024, 11, 31))).toBe('winter'); // December 31
+      expect(getCurrentSeason(new Date(2024, 0, 1))).toBe('winter'); // January 1
+      expect(getCurrentSeason(new Date(2024, 0, 15))).toBe('winter'); // January 15
+      expect(getCurrentSeason(new Date(2024, 0, 31))).toBe('winter'); // January 31
+      expect(getCurrentSeason(new Date(2024, 1, 1))).toBe('winter'); // February 1
+      expect(getCurrentSeason(new Date(2024, 1, 15))).toBe('winter'); // February 15
+      expect(getCurrentSeason(new Date(2024, 1, 29))).toBe('winter'); // February 29
+    });
+
+    it('should use current date when no parameter is provided', () => {
+      const result = getCurrentSeason();
+      expect(['spring', 'summer', 'fall', 'winter']).toContain(result);
+    });
+
+    it('should handle invalid date input by using current date', () => {
+      const result = getCurrentSeason(new Date('invalid'));
+      expect(['spring', 'summer', 'fall', 'winter']).toContain(result);
+    });
+
+    it('should handle non-Date input by using current date', () => {
+      const result = getCurrentSeason('not a date');
+      expect(['spring', 'summer', 'fall', 'winter']).toContain(result);
     });
   });
 });

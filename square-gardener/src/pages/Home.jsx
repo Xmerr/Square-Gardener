@@ -59,9 +59,35 @@ function Home() {
         <p className="text-lg text-gray-600">Your Square Foot Gardening Companion</p>
       </div>
 
+      {/* Getting Started - Prominent for New Users */}
+      {stats.totalPlants === 0 && (
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 shadow-lg border-2 border-primary mb-8">
+          <div className="text-center">
+            <div className="text-7xl mb-4 animate-bounce">🌱</div>
+            <h2 className="text-3xl font-bold text-primary mb-4">
+              Get Started with Square Gardening
+            </h2>
+            <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto leading-relaxed">
+              Square Foot Gardening is a simple way to grow more food in less space. Start by adding
+              plants to your garden and let us help you track watering schedules, harvests, and more!
+            </p>
+            <Link
+              to="/my-garden"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-bold text-lg py-4 px-10 rounded-xl transition-all transform hover:scale-105 shadow-md hover:shadow-xl"
+            >
+              <span className="text-2xl">🌿</span>
+              <span>Add Your First Plant</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-6 text-white shadow-lg">
+        <Link
+          to="/my-garden"
+          className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm uppercase tracking-wide mb-1">Total Plants</p>
@@ -69,9 +95,12 @@ function Home() {
             </div>
             <div className="text-5xl opacity-80">🌱</div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+        <Link
+          to="/watering"
+          className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm uppercase tracking-wide mb-1">Need Water</p>
@@ -79,9 +108,12 @@ function Home() {
             </div>
             <div className="text-5xl opacity-80">💧</div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl p-6 text-white shadow-lg">
+        <Link
+          to="/my-garden"
+          className="bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-amber-100 text-sm uppercase tracking-wide mb-1">Ready to Harvest</p>
@@ -91,7 +123,7 @@ function Home() {
             </div>
             <div className="text-5xl opacity-80">🌾</div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Quick Actions */}
@@ -153,24 +185,6 @@ function Home() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Getting Started */}
-      {stats.totalPlants === 0 && (
-        <div className="bg-card rounded-xl p-8 shadow-md text-center">
-          <div className="text-6xl mb-4">🌱</div>
-          <h2 className="text-2xl font-bold text-primary mb-4">Get Started with Square Gardening</h2>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Square Foot Gardening is a simple way to grow more food in less space. Start by adding
-            plants to your garden and let us help you track watering schedules, harvests, and more!
-          </p>
-          <Link
-            to="/my-garden"
-            className="inline-block bg-primary hover:bg-primary-light text-white font-medium py-3 px-8 rounded-lg transition-colors"
-          >
-            Add Your First Plant
-          </Link>
         </div>
       )}
     </div>

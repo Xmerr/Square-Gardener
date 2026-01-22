@@ -10,6 +10,23 @@ function BedForm({ bed, onSubmit, onCancel }) {
   const [size, setSize] = useState(bed?.size || 'medium');
   const [errors, setErrors] = useState({});
 
+  const validateField = (fieldName, value) => {
+    if (fieldName === 'name') {
+      return value.trim() ? null : 'Name is required';
+    }
+    if (fieldName === 'width') {
+      const widthNum = parseFloat(value);
+      if (!value || isNaN(widthNum)) return 'Width is required';
+      if (widthNum <= 0) return 'Width must be greater than 0';
+      return null;
+    }
+    // fieldName === 'height'
+    const heightNum = parseFloat(value);
+    if (!value || isNaN(heightNum)) return 'Height is required';
+    if (heightNum <= 0) return 'Height must be greater than 0';
+    return null;
+  };
+
   const validate = () => {
     const newErrors = {};
 
@@ -92,7 +109,20 @@ function BedForm({ bed, onSubmit, onCancel }) {
           id="bed-name"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setName(newValue);
+            if (errors.name) {
+              const error = validateField('name', newValue);
+              if (!error) {
+                setErrors(prev => {
+                  const next = { ...prev };
+                  delete next.name;
+                  return next;
+                });
+              }
+            }
+          }}
           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
             errors.name ? 'border-red-500' : 'border-gray-300'
           }`}
@@ -108,7 +138,18 @@ function BedForm({ bed, onSubmit, onCancel }) {
           id="is-pot"
           type="checkbox"
           checked={isPot}
-          onChange={(e) => setIsPot(e.target.checked)}
+          onChange={(e) => {
+            const newValue = e.target.checked;
+            setIsPot(newValue);
+            if (newValue && (errors.width || errors.height)) {
+              setErrors(prev => {
+                const next = { ...prev };
+                delete next.width;
+                delete next.height;
+                return next;
+              });
+            }
+          }}
           className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
         />
         <label htmlFor="is-pot" className="ml-2 block text-sm text-gray-700">
@@ -145,7 +186,20 @@ function BedForm({ bed, onSubmit, onCancel }) {
               type="number"
               step="0.5"
               value={width}
-              onChange={(e) => setWidth(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setWidth(newValue);
+                if (errors.width) {
+                  const error = validateField('width', newValue);
+                  if (!error) {
+                    setErrors(prev => {
+                      const next = { ...prev };
+                      delete next.width;
+                      return next;
+                    });
+                  }
+                }
+              }}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.width ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -165,7 +219,20 @@ function BedForm({ bed, onSubmit, onCancel }) {
               type="number"
               step="0.5"
               value={height}
-              onChange={(e) => setHeight(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setHeight(newValue);
+                if (errors.height) {
+                  const error = validateField('height', newValue);
+                  if (!error) {
+                    setErrors(prev => {
+                      const next = { ...prev };
+                      delete next.height;
+                      return next;
+                    });
+                  }
+                }
+              }}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.height ? 'border-red-500' : 'border-gray-300'
               }`}

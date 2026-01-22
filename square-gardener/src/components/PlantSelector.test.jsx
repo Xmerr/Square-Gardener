@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PlantSelector from './PlantSelector';
+import * as dateFormatting from '../utils/dateFormatting';
+
+// Mock getCurrentSeason to return 'spring' for consistent testing
+vi.spyOn(dateFormatting, 'getCurrentSeason').mockReturnValue('spring');
 
 describe('PlantSelector', () => {
   const defaultProps = {
@@ -32,11 +36,12 @@ describe('PlantSelector', () => {
       expect(screen.getByPlaceholderText('Search plants...')).toBeInTheDocument();
     });
 
-    it('should render season filter', () => {
+    it('should render season filter defaulted to current season', () => {
       render(<PlantSelector {...defaultProps} />);
 
-      expect(screen.getByRole('combobox')).toBeInTheDocument();
-      expect(screen.getByText('All Seasons')).toBeInTheDocument();
+      const seasonSelect = screen.getByRole('combobox');
+      expect(seasonSelect).toBeInTheDocument();
+      expect(seasonSelect.value).toBe('spring');
     });
 
     it('should render plant cards', () => {
@@ -208,6 +213,16 @@ describe('PlantSelector', () => {
 
       // Lettuce is a fall plant
       expect(screen.getByText('Lettuce')).toBeInTheDocument();
+    });
+
+    it('should allow user to change season filter to all seasons', () => {
+      render(<PlantSelector {...defaultProps} />);
+
+      const seasonSelect = screen.getByRole('combobox');
+      expect(seasonSelect.value).toBe('spring');
+
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+      expect(seasonSelect.value).toBe('all');
     });
 
     it('should show no results message when no plants match', () => {

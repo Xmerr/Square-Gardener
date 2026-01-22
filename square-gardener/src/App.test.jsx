@@ -40,7 +40,8 @@ describe('App', () => {
 
   it('renders the footer', () => {
     render(<App />);
-    expect(screen.getByText(/Built with React/)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 Square Gardener/)).toBeInTheDocument();
+    expect(screen.getByText(/Making square foot gardening simple and productive/)).toBeInTheDocument();
   });
 
   it('renders 404 page for invalid routes', () => {

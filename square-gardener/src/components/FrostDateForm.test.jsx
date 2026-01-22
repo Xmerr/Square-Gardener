@@ -461,6 +461,160 @@ describe('FrostDateForm', () => {
     });
   });
 
+  describe('error clearing on valid input', () => {
+    it('clears spring frost error when valid date is entered', () => {
+      render(<FrostDateForm />);
+
+      // First trigger a validation error
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Last spring frost date is required')).toBeInTheDocument();
+
+      // Now enter valid spring frost date
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+
+      expect(screen.queryByText('Last spring frost date is required')).not.toBeInTheDocument();
+    });
+
+    it('clears fall frost error when valid date is entered', () => {
+      render(<FrostDateForm />);
+
+      // Get all selects - use role-based queries for more reliable selection
+      const monthSelects = screen.getAllByRole('combobox').filter(el => el.id.includes('month'));
+      const daySelects = screen.getAllByRole('combobox').filter(el => el.id.includes('day'));
+
+      // First trigger a validation error by setting spring frost only
+      fireEvent.change(monthSelects[0], { target: { value: '04' } });
+      fireEvent.change(daySelects[0], { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('First fall frost date is required')).toBeInTheDocument();
+
+      // Now enter valid fall frost date
+      fireEvent.change(monthSelects[1], { target: { value: '10' } });
+      fireEvent.change(daySelects[1], { target: { value: '15' } });
+
+      expect(screen.queryByText('First fall frost date is required')).not.toBeInTheDocument();
+    });
+
+    it('clears fall frost order error when spring frost is corrected', () => {
+      render(<FrostDateForm />);
+
+      // Set up dates where fall is before spring
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+
+      fireEvent.change(springMonthSelect, { target: { value: '10' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '04' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
+
+      // Fix by changing spring to be before fall
+      fireEvent.change(springMonthSelect, { target: { value: '03' } });
+
+      expect(screen.queryByText('Fall frost must be after spring frost')).not.toBeInTheDocument();
+    });
+
+    it('clears fall frost order error when fall frost is corrected', () => {
+      render(<FrostDateForm />);
+
+      // Set up dates where fall is before spring
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+
+      fireEvent.change(springMonthSelect, { target: { value: '10' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '04' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
+
+      // Fix by changing fall to be after spring
+      fireEvent.change(fallMonthSelect, { target: { value: '11' } });
+
+      expect(screen.queryByText('Fall frost must be after spring frost')).not.toBeInTheDocument();
+    });
+
+    it('does not clear fall frost error when fall date is still invalid', () => {
+      render(<FrostDateForm />);
+
+      // Set up dates where fall is before spring
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+
+      fireEvent.change(springMonthSelect, { target: { value: '06' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.change(fallMonthSelect, { target: { value: '04' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
+
+      // Change fall to another invalid date (still before spring)
+      fireEvent.change(fallMonthSelect, { target: { value: '05' } });
+
+      // Error should still be present
+      expect(screen.getByText('Fall frost must be after spring frost')).toBeInTheDocument();
+    });
+
+    it('keeps spring frost error when invalid date is entered', () => {
+      render(<FrostDateForm />);
+
+      // First trigger a validation error
+      const fallMonthSelect = screen.getAllByDisplayValue('Month')[1];
+      const fallDaySelect = screen.getAllByDisplayValue('Day')[1];
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+      fireEvent.change(fallDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('Last spring frost date is required')).toBeInTheDocument();
+
+      // Enter partial date (still invalid) - error is not cleared
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+
+      // Error should remain (not cleared because still invalid)
+      expect(screen.getByText('Last spring frost date is required')).toBeInTheDocument();
+    });
+
+    it('keeps fall frost error when invalid date is entered', () => {
+      render(<FrostDateForm />);
+
+      // First trigger a validation error
+      const springMonthSelect = screen.getAllByDisplayValue('Month')[0];
+      const springDaySelect = screen.getAllByDisplayValue('Day')[0];
+      fireEvent.change(springMonthSelect, { target: { value: '04' } });
+      fireEvent.change(springDaySelect, { target: { value: '15' } });
+      fireEvent.click(screen.getByText('Save Frost Dates'));
+
+      expect(screen.getByText('First fall frost date is required')).toBeInTheDocument();
+
+      // Enter partial date (still invalid) - error is not cleared
+      const fallMonthSelect = screen.getAllByRole('combobox').filter(el => el.id.includes('month'))[1];
+      fireEvent.change(fallMonthSelect, { target: { value: '10' } });
+
+      // Error should remain (not cleared because still invalid - no day selected)
+      expect(screen.getByText('First fall frost date is required')).toBeInTheDocument();
+    });
+  });
+
   describe('ZIP code validation', () => {
     it('should show error when non-numeric characters are entered', () => {
       render(<FrostDateForm />);

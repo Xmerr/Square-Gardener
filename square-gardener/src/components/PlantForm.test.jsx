@@ -721,6 +721,180 @@ describe('PlantForm', () => {
     });
   });
 
+  describe('error clearing on valid input', () => {
+    it('clears plantId error when valid plant is selected', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+      expect(screen.getByText('Please select a plant')).toBeInTheDocument();
+
+      // Select a valid plant
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+
+      expect(screen.queryByText('Please select a plant')).not.toBeInTheDocument();
+    });
+
+    it('clears quantity error when valid quantity is entered', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Quantity is required')).toBeInTheDocument();
+
+      // Enter valid quantity
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '5' } });
+
+      expect(screen.queryByText('Quantity is required')).not.toBeInTheDocument();
+    });
+
+    it('clears plantDate error when valid date is entered', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.change(screen.getByLabelText('Plant Date'), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Plant date is required')).toBeInTheDocument();
+
+      // Enter valid date
+      fireEvent.change(screen.getByLabelText('Plant Date'), { target: { value: '2026-03-15' } });
+
+      expect(screen.queryByText('Plant date is required')).not.toBeInTheDocument();
+    });
+
+    it('clears daysToMaturity error when valid value is entered', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error with invalid value (over 365)
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '500' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 1 and 365 days')).toBeInTheDocument();
+
+      // Enter valid value
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '50' } });
+
+      expect(screen.queryByText('Must be between 1 and 365 days')).not.toBeInTheDocument();
+    });
+
+    it('clears spacePerPlant error when valid value is entered', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error with invalid value (over 10)
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '15' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 0.01 and 10')).toBeInTheDocument();
+
+      // Enter valid value
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '1.5' } });
+
+      expect(screen.queryByText('Must be between 0.01 and 10')).not.toBeInTheDocument();
+    });
+
+    it('does not clear daysToMaturity error when value is still invalid', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 1 and 365 days')).toBeInTheDocument();
+
+      // Enter another invalid value
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '400' } });
+
+      // Error should still be present
+      expect(screen.getByText('Must be between 1 and 365 days')).toBeInTheDocument();
+    });
+
+    it('does not clear spacePerPlant error when value is still invalid', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 0.01 and 10')).toBeInTheDocument();
+
+      // Enter another invalid value
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '20' } });
+
+      // Error should still be present
+      expect(screen.getByText('Must be between 0.01 and 10')).toBeInTheDocument();
+    });
+
+    it('keeps quantity error when entering invalid value', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error with zero
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Quantity must be greater than 0')).toBeInTheDocument();
+
+      // Enter another invalid value - error is not cleared (just not updated)
+      fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '-1' } });
+
+      // Error remains (not cleared because still invalid)
+      expect(screen.getByText('Quantity must be greater than 0')).toBeInTheDocument();
+    });
+
+    it('clears daysToMaturity error when field is emptied', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '500' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 1 and 365 days')).toBeInTheDocument();
+
+      // Clear the field (empty is valid - uses default)
+      fireEvent.change(screen.getByLabelText('Days to Maturity Override'), { target: { value: '' } });
+
+      expect(screen.queryByText('Must be between 1 and 365 days')).not.toBeInTheDocument();
+    });
+
+    it('clears spacePerPlant error when field is emptied', () => {
+      render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      fireEvent.change(screen.getByLabelText('Plant Type'), { target: { value: 'tomato' } });
+      fireEvent.click(screen.getByText('Advanced Options'));
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '15' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Plant' }));
+
+      expect(screen.getByText('Must be between 0.01 and 10')).toBeInTheDocument();
+
+      // Clear the field (empty is valid - uses default)
+      fireEvent.change(screen.getByLabelText('Squares per Plant Override'), { target: { value: '' } });
+
+      expect(screen.queryByText('Must be between 0.01 and 10')).not.toBeInTheDocument();
+    });
+  });
+
   describe('form state changes', () => {
     it('updates bed selection', () => {
       render(<PlantForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);

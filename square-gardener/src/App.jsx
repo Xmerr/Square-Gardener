@@ -34,7 +34,7 @@ function App() {
         </main>
 
         <footer className="bg-footer text-text-muted text-center py-3 px-4 sm:py-4 text-sm sm:text-base">
-          <p className="m-0">Built with React + Vite | Deployed via GitHub Actions</p>
+          <p className="m-0">© 2026 Square Gardener - Making square foot gardening simple and productive</p>
         </footer>
       </div>
     </Router>

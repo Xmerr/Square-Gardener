@@ -23,6 +23,21 @@ function FrostDateForm({ onSave, initialFrostDates }) {
   const [lookupMessage, setLookupMessage] = useState('');
   const [zipError, setZipError] = useState('');
 
+  const validateField = (fieldName, value, otherValue) => {
+    if (fieldName === 'lastSpringFrost') {
+      if (!value) return 'Last spring frost date is required';
+      if (!isValidMonthDay(value)) return 'Invalid date format';
+      return null;
+    }
+    // fieldName === 'firstFallFrost'
+    if (!value) return 'First fall frost date is required';
+    if (!isValidMonthDay(value)) return 'Invalid date format';
+    if (otherValue && isValidMonthDay(otherValue) && !isBeforeInYear(otherValue, value)) {
+      return 'Fall frost must be after spring frost';
+    }
+    return null;
+  };
+
   const validateDates = () => {
     const newErrors = {};
 
@@ -199,7 +214,26 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               <MonthDayPicker
                 id="last-spring-frost"
                 value={lastSpringFrost}
-                onChange={setLastSpringFrost}
+                onChange={(newValue) => {
+                  setLastSpringFrost(newValue);
+                  if (errors.lastSpringFrost || errors.firstFallFrost) {
+                    const error = validateField('lastSpringFrost', newValue);
+                    if (!error) {
+                      setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.lastSpringFrost;
+                        // Also revalidate firstFallFrost in case the order issue is resolved
+                        if (next.firstFallFrost && firstFallFrost) {
+                          const fallError = validateField('firstFallFrost', firstFallFrost, newValue);
+                          if (!fallError) {
+                            delete next.firstFallFrost;
+                          }
+                        }
+                        return next;
+                      });
+                    }
+                  }
+                }}
                 hasError={!!errors.lastSpringFrost}
               />
               {errors.lastSpringFrost && (
@@ -214,7 +248,19 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               <MonthDayPicker
                 id="first-fall-frost"
                 value={firstFallFrost}
-                onChange={setFirstFallFrost}
+                onChange={(newValue) => {
+                  setFirstFallFrost(newValue);
+                  if (errors.firstFallFrost) {
+                    const error = validateField('firstFallFrost', newValue, lastSpringFrost);
+                    if (!error) {
+                      setErrors(prev => {
+                        const next = { ...prev };
+                        delete next.firstFallFrost;
+                        return next;
+                      });
+                    }
+                  }
+                }}
                 hasError={!!errors.firstFallFrost}
               />
               {errors.firstFallFrost && (

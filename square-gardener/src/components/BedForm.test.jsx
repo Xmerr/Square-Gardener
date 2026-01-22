@@ -431,6 +431,164 @@ describe('BedForm', () => {
     });
   });
 
+  describe('error clearing on valid input', () => {
+    it('clears name error when valid name is entered', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Name is required')).toBeInTheDocument();
+
+      // Enter valid name to clear error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Valid Name' } });
+
+      expect(screen.queryByText('Name is required')).not.toBeInTheDocument();
+    });
+
+    it('clears width error when valid width is entered', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Width is required')).toBeInTheDocument();
+
+      // Enter valid width to clear error
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+
+      expect(screen.queryByText('Width is required')).not.toBeInTheDocument();
+    });
+
+    it('clears height error when valid height is entered', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Height is required')).toBeInTheDocument();
+
+      // Enter valid height to clear error
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+
+      expect(screen.queryByText('Height is required')).not.toBeInTheDocument();
+    });
+
+    it('does not clear name error when input is still invalid', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Name is required')).toBeInTheDocument();
+
+      // Enter whitespace-only name (still invalid)
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: '   ' } });
+
+      // Error should still be shown
+      expect(screen.getByText('Name is required')).toBeInTheDocument();
+    });
+
+    it('clears width/height errors when switching to pot mode', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation errors
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Width is required')).toBeInTheDocument();
+      expect(screen.getByText('Height is required')).toBeInTheDocument();
+
+      // Switch to pot mode
+      fireEvent.click(screen.getByLabelText('This is a pot'));
+
+      // Width/height errors should be cleared
+      expect(screen.queryByText('Width is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Height is required')).not.toBeInTheDocument();
+    });
+
+    it('does not clear width error when value is still invalid', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '-1' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Width must be greater than 0')).toBeInTheDocument();
+
+      // Enter another invalid width
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '0' } });
+
+      // Error should still be shown
+      expect(screen.getByText('Width must be greater than 0')).toBeInTheDocument();
+    });
+
+    it('keeps width error when entering still-invalid value after error exists', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '-1' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Width must be greater than 0')).toBeInTheDocument();
+
+      // Clear the field (empty = still invalid) - error is not cleared, not updated
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '' } });
+
+      // Error remains (not cleared because still invalid)
+      expect(screen.getByText('Width must be greater than 0')).toBeInTheDocument();
+    });
+
+    it('keeps height error when entering still-invalid value after error exists', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '-1' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Height must be greater than 0')).toBeInTheDocument();
+
+      // Clear the field (empty = still invalid) - error is not cleared, not updated
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '' } });
+
+      // Error remains (not cleared because still invalid)
+      expect(screen.getByText('Height must be greater than 0')).toBeInTheDocument();
+    });
+
+    it('does not clear height error when value is still invalid', () => {
+      render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      // Trigger validation error
+      fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
+      fireEvent.change(screen.getByLabelText('Width (ft)'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '-1' } });
+      fireEvent.click(screen.getByText('Create Bed'));
+
+      expect(screen.getByText('Height must be greater than 0')).toBeInTheDocument();
+
+      // Enter another invalid height
+      fireEvent.change(screen.getByLabelText('Height (ft)'), { target: { value: '0' } });
+
+      // Error should still be shown
+      expect(screen.getByText('Height must be greater than 0')).toBeInTheDocument();
+    });
+
+  });
+
   describe('mode switching', () => {
     it('preserves name when switching from bed to pot mode', () => {
       render(<BedForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);

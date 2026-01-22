@@ -4,8 +4,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import MyGarden from './MyGarden';
 import * as storage from '../utils/storage';
 import * as plantLibraryModule from '../data/plantLibrary';
+import * as dateFormatting from '../utils/dateFormatting';
 
 vi.mock('../utils/storage');
+
+// Mock getCurrentSeason to return 'spring' for consistent testing
+vi.spyOn(dateFormatting, 'getCurrentSeason').mockReturnValue('spring');
 
 const mockTomato = {
   id: 'tomato',
@@ -321,6 +325,28 @@ describe('MyGarden', () => {
       expect(screen.queryByText('Choose plants to add to your garden')).not.toBeInTheDocument();
     });
 
+    it('closes when clicking outside the modal', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Click the backdrop (parent div)
+      const backdrop = screen.getByText('Plant Library').closest('.fixed');
+      fireEvent.click(backdrop);
+
+      expect(screen.queryByText('Choose plants to add to your garden')).not.toBeInTheDocument();
+    });
+
+    it('does not close when clicking inside the modal content', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Click inside the modal content
+      const modalContent = screen.getByText('Plant Library');
+      fireEvent.click(modalContent);
+
+      expect(screen.getByText('Choose plants to add to your garden')).toBeInTheDocument();
+    });
+
     it('shows search input', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
@@ -343,6 +369,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const searchInput = screen.getByPlaceholderText('Search plants...');
       fireEvent.change(searchInput, { target: { value: 'tomato' } });
 
@@ -352,6 +382,10 @@ describe('MyGarden', () => {
     it('filters by scientific name', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
 
       const searchInput = screen.getByPlaceholderText('Search plants...');
       fireEvent.change(searchInput, { target: { value: 'Solanum' } });
@@ -389,6 +423,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
@@ -399,6 +437,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
@@ -408,6 +450,10 @@ describe('MyGarden', () => {
     it('auto-selects bed when only one exists', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
 
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
@@ -433,6 +479,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
@@ -447,6 +497,10 @@ describe('MyGarden', () => {
     it('can go back from bed selection', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
 
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
@@ -474,6 +528,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
       fireEvent.click(screen.getByText('Add to Garden'));
@@ -489,6 +547,10 @@ describe('MyGarden', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
 
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
+
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
 
@@ -499,6 +561,10 @@ describe('MyGarden', () => {
     it('handles invalid quantity input', () => {
       renderMyGarden();
       fireEvent.click(screen.getByText('Browse Plant Library'));
+
+      // Set season filter to 'all' to see all plants
+      const seasonSelect = screen.getByRole('combobox');
+      fireEvent.change(seasonSelect, { target: { value: 'all' } });
 
       const addButtons = screen.getAllByText('+ Add to Garden');
       fireEvent.click(addButtons[0]);
