@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { getPlantById } from '../data/plantLibrary';
-import { validateArrangement } from '../utils/planningAlgorithm';
+import { validateArrangement, getAdjacentPositions } from '../utils/planningAlgorithm';
 
 const PLANT_COLORS = {
   tomato: '#ef4444',
@@ -46,6 +46,58 @@ const getContrastColor = (hexColor) => {
   const b = parseInt(hexColor.slice(5, 7), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.5 ? '#1f2937' : '#ffffff';
+};
+
+/**
+ * Get companion/enemy status for a square
+ * @param {Array<Array<string|null>>} grid - The garden grid
+ * @param {number} row - Row index
+ * @param {number} col - Column index
+ * @returns {{ hasCompanion: boolean, hasEnemy: boolean, companions: string[], enemies: string[] }}
+ */
+export const getSquareCompanionStatus = (grid, row, col) => {
+  const plantId = grid[row]?.[col];
+  if (!plantId) {
+    return { hasCompanion: false, hasEnemy: false, companions: [], enemies: [] };
+  }
+
+  const plant = getPlantById(plantId);
+  if (!plant) {
+    return { hasCompanion: false, hasEnemy: false, companions: [], enemies: [] };
+  }
+
+  const height = grid.length;
+  const width = grid[0].length;
+  const adjacentPositions = getAdjacentPositions(row, col, width, height);
+
+  const companions = [];
+  const enemies = [];
+
+  for (const pos of adjacentPositions) {
+    const adjacentPlantId = grid[pos.row][pos.col];
+    if (!adjacentPlantId) continue;
+
+    const adjacentPlant = getPlantById(adjacentPlantId);
+    if (!adjacentPlant) continue;
+
+    if (plant.companionPlants.includes(adjacentPlantId)) {
+      if (!companions.includes(adjacentPlant.name)) {
+        companions.push(adjacentPlant.name);
+      }
+    }
+    if (plant.avoidPlants.includes(adjacentPlantId)) {
+      if (!enemies.includes(adjacentPlant.name)) {
+        enemies.push(adjacentPlant.name);
+      }
+    }
+  }
+
+  return {
+    hasCompanion: companions.length > 0,
+    hasEnemy: enemies.length > 0,
+    companions,
+    enemies
+  };
 };
 
 function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrangementChange, editable = false }) {
@@ -181,6 +233,26 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                 const displayName = plant ? plant.name : (plantId || 'Empty');
                 const displayInitial = plant ? plant.name.charAt(0).toUpperCase() : (plantId ? plantId.charAt(0).toUpperCase() : '');
 
+                // Get companion/enemy status for visual tints
+                const companionStatus = getSquareCompanionStatus(grid, rowIndex, colIndex);
+
+                // Build tooltip with companion/enemy information
+                let tooltip = `${displayName} (${rowIndex}, ${colIndex})`;
+                if (companionStatus.companions.length > 0) {
+                  tooltip += `\nCompanions: ${companionStatus.companions.join(', ')}`;
+                }
+                if (companionStatus.enemies.length > 0) {
+                  tooltip += `\nWarning: near ${companionStatus.enemies.join(', ')} (incompatible)`;
+                }
+
+                // Determine box shadow for companion/enemy tint (enemy takes precedence)
+                let boxShadow = 'none';
+                if (companionStatus.hasEnemy) {
+                  boxShadow = 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)';
+                } else if (companionStatus.hasCompanion) {
+                  boxShadow = 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)';
+                }
+
                 return (
                   <button
                     key={`${rowIndex}-${colIndex}`}
@@ -193,8 +265,8 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                     className={`${cellSize} rounded flex items-center justify-center font-medium transition-transform hover:scale-105 relative ${
                       isLocked ? 'ring-2 ring-gray-400' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''} ${editable && plantId && !isLocked ? 'cursor-move' : ''}`}
-                    style={{ backgroundColor: bgColor, color: textColor }}
-                    title={`${displayName} (${rowIndex}, ${colIndex})`}
+                    style={{ backgroundColor: bgColor, color: textColor, boxShadow }}
+                    title={tooltip}
                   >
                     {displayInitial}
                     {isLocked && (
@@ -223,6 +295,29 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                   <span className="text-xs text-gray-500">×{count}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Companion Planting Legend */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Companion Indicators</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded border border-gray-300"
+                    style={{ backgroundColor: '#d1d5db', boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-gray-600">Good companion nearby</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded border border-gray-300"
+                    style={{ backgroundColor: '#d1d5db', boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-gray-600">Incompatible plant nearby</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
