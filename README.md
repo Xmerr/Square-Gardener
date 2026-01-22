@@ -1,47 +1,16 @@
-# Square Gardener
+# React + Vite
 
-A responsive web application to help gardeners manage their plants, watering schedules, and vegetable garden planning using square foot gardening principles.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-**[Live Preview](https://xmerr.github.io/Square-Gardener/)**
+Currently, two official plugins are available:
 
-## Overview
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-Square Gardener is a free, web-based gardening companion that helps you:
-- Track your plants and their care requirements
-- Manage watering schedules and get reminders
-- Plan your vegetable garden using square foot gardening rules
-- Determine optimal planting times for different crops
-- Organize your garden layout efficiently
+## React Compiler
 
-## Philosophy
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-This app is built around the **Square Foot Gardening** methodology, which emphasizes:
-- Intensive planting in raised beds divided into 1-foot squares
-- Companion planting strategies
-- Succession planting for continuous harvests
-- Water conservation and efficient spacing
+## Expanding the ESLint configuration
 
-## Technology Stack
-
-- **Frontend**: React
-- **Hosting**: GitHub Pages (free)
-- **Deployment**: GitHub Actions (automatic deployment on push to main)
-- **Data Storage**: Session-based (MVP), future: cloud database
-
-## Getting Started
-
-See [PROTOTYPE.md](./PROTOTYPE.md) for setup instructions and deployment details.
-
-See [MVP.md](./MVP.md) for the current feature roadmap.
-
-## Development
-
-This project uses continuous deployment via GitHub Actions. Any push to the `main` branch automatically triggers a build and deployment to the production environment.
-
-## Vision
-
-The north star for Square Gardener is to become a comprehensive gardening assistant that takes the guesswork out of gardening, helping both beginners and experienced gardeners maximize their harvest while minimizing waste and effort.
-
-## License
-
-MIT
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

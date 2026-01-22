@@ -43,12 +43,12 @@ vi.mock('../components/FrostDateForm', () => ({
 }));
 
 vi.mock('../components/PlantSelector', () => ({
-  default: ({ onPlantsSelected, availableSquares }) => (
+  default: ({ onSelectionChange, availableSpace }) => (
     <div>
       <h3>Select Plants</h3>
-      <div>Available: {availableSquares}</div>
-      <button onClick={() => onPlantsSelected && onPlantsSelected([])}>Mock Select None</button>
-      <button onClick={() => onPlantsSelected && onPlantsSelected([{ plantId: 'tomato', quantity: 2 }])}>Mock Select Plants</button>
+      <div>Available: {availableSpace}</div>
+      <button onClick={() => onSelectionChange && onSelectionChange([])}>Mock Select None</button>
+      <button onClick={() => onSelectionChange && onSelectionChange([{ plantId: 'tomato', quantity: 2 }])}>Mock Select Plants</button>
     </div>
   )
 }));
@@ -372,7 +372,7 @@ describe('Planner', () => {
     expect(screen.getByText('Garden Planner')).toBeInTheDocument();
   });
 
-  it('calls onPlantsSelected when plants are selected', () => {
+  it('calls onSelectionChange when plants are selected', () => {
     render(<Planner />);
 
     const mockSelectButton = screen.getByText('Mock Select None');
