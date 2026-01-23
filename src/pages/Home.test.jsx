@@ -69,11 +69,6 @@ describe('Home', () => {
       expect(screen.getByText('Total Plants')).toBeInTheDocument();
     });
 
-    it('renders need water stat card', () => {
-      renderHome();
-      expect(screen.getByText('Need Water')).toBeInTheDocument();
-    });
-
     it('renders ready to harvest stat card', () => {
       renderHome();
       expect(screen.getByText('Ready to Harvest')).toBeInTheDocument();
@@ -85,12 +80,6 @@ describe('Home', () => {
       renderHome();
       const totalPlantsCard = screen.getByText('Total Plants').closest('a');
       expect(totalPlantsCard).toHaveAttribute('href', '/my-garden');
-    });
-
-    it('need water card links to watering', () => {
-      renderHome();
-      const needWaterCard = screen.getByText('Need Water').closest('a');
-      expect(needWaterCard).toHaveAttribute('href', '/watering');
     });
 
     it('ready to harvest card links to my-garden', () => {
@@ -122,7 +111,7 @@ describe('Home', () => {
     it('displays zero for all stats when no plants', () => {
       renderHome();
       const zeros = screen.getAllByText('0');
-      expect(zeros.length).toBe(3); // Total, Need Water, Ready to Harvest
+      expect(zeros.length).toBe(2); // Total, Ready to Harvest
     });
 
     it('shows prominent getting started section with enhanced styling', () => {
@@ -182,11 +171,6 @@ describe('Home', () => {
     it('displays correct total plants count', () => {
       renderHome();
       expect(screen.getByText('2')).toBeInTheDocument();
-    });
-
-    it('calculates plants needing water', () => {
-      renderHome();
-      expect(screen.getByText('1')).toBeInTheDocument(); // Only tomato needs water
     });
 
     it('does not show getting started section', () => {
@@ -300,10 +284,10 @@ describe('Home', () => {
       expect(screen.getByText('Add and manage your plants')).toBeInTheDocument();
     });
 
-    it('renders Watering Schedule link', () => {
+    it('renders Garden Planner link', () => {
       renderHome();
-      expect(screen.getByText('Watering Schedule')).toBeInTheDocument();
-      expect(screen.getByText('Track and update watering')).toBeInTheDocument();
+      expect(screen.getByText('Garden Planner')).toBeInTheDocument();
+      expect(screen.getByText('Plan your garden layout')).toBeInTheDocument();
     });
   });
 
@@ -322,7 +306,6 @@ describe('Home', () => {
       renderHome();
       // Should not crash - verify page renders with stats
       expect(screen.getByText('Total Plants')).toBeInTheDocument();
-      expect(screen.getByText('Need Water')).toBeInTheDocument();
       expect(screen.getByText('Ready to Harvest')).toBeInTheDocument();
     });
   });

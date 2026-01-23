@@ -31,13 +31,6 @@ function NotFound() {
           <p className="text-gray-600 mb-4">Quick Navigation</p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
-              to="/watering"
-              className="text-primary hover:text-primary-light font-medium transition-colors"
-            >
-              💧 Watering
-            </Link>
-            <span className="text-gray-300">•</span>
-            <Link
               to="/planner"
               className="text-primary hover:text-primary-light font-medium transition-colors"
             >
