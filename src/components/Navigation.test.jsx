@@ -224,4 +224,91 @@ describe('Navigation', () => {
       expect(screen.getByText('Menu')).toBeInTheDocument();
     });
   });
+
+  describe('Accessibility - Focus Indicators', () => {
+    it('mobile menu button has focus-visible styles', () => {
+      renderWithRouter();
+      const menuButton = screen.getByLabelText('Toggle navigation menu');
+      expect(menuButton.className).toContain('focus-visible:outline');
+      expect(menuButton.className).toContain('focus-visible:outline-3');
+      expect(menuButton.className).toContain('focus-visible:outline-blue-600');
+      expect(menuButton.className).toContain('focus-visible:outline-offset-2');
+    });
+
+    it('desktop navigation links have focus-visible styles', () => {
+      renderWithRouter();
+      const homeLinks = screen.getAllByText('🏠 Home');
+      const desktopHomeLink = homeLinks.find(
+        link => !link.closest('a')?.className.includes('block')
+      );
+      const linkElement = desktopHomeLink.closest('a');
+      expect(linkElement.className).toContain('focus-visible:outline');
+      expect(linkElement.className).toContain('focus-visible:outline-3');
+      expect(linkElement.className).toContain('focus-visible:outline-blue-600');
+      expect(linkElement.className).toContain('focus-visible:outline-offset-2');
+    });
+
+    it('mobile navigation links have focus-visible styles', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const menuButton = screen.getByLabelText('Toggle navigation menu');
+
+      await user.click(menuButton);
+
+      const homeLinks = screen.getAllByText('🏠 Home');
+      const mobileHomeLink = homeLinks.find(
+        link => link.closest('a')?.className.includes('block')
+      );
+      const linkElement = mobileHomeLink.closest('a');
+      expect(linkElement.className).toContain('focus-visible:outline');
+      expect(linkElement.className).toContain('focus-visible:outline-3');
+      expect(linkElement.className).toContain('focus-visible:outline-blue-600');
+      expect(linkElement.className).toContain('focus-visible:outline-offset-2');
+    });
+
+    it('all desktop navigation links have consistent focus styles', () => {
+      renderWithRouter();
+      const allLinks = [
+        '🏠 Home',
+        '🌿 My Garden',
+        '💧 Watering',
+        '📐 Planner',
+        '📅 Calendar',
+      ];
+
+      allLinks.forEach(linkText => {
+        const links = screen.getAllByText(linkText);
+        const desktopLink = links.find(
+          link => !link.closest('a')?.className.includes('block')
+        );
+        const linkElement = desktopLink.closest('a');
+        expect(linkElement.className).toContain('focus-visible:outline-blue-600');
+      });
+    });
+
+    it('all mobile navigation links have consistent focus styles when menu is open', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const menuButton = screen.getByLabelText('Toggle navigation menu');
+
+      await user.click(menuButton);
+
+      const allLinks = [
+        '🏠 Home',
+        '🌿 My Garden',
+        '💧 Watering',
+        '📐 Planner',
+        '📅 Calendar',
+      ];
+
+      allLinks.forEach(linkText => {
+        const links = screen.getAllByText(linkText);
+        const mobileLink = links.find(
+          link => link.closest('a')?.className.includes('block')
+        );
+        const linkElement = mobileLink.closest('a');
+        expect(linkElement.className).toContain('focus-visible:outline-blue-600');
+      });
+    });
+  });
 });

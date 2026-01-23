@@ -46,6 +46,7 @@ describe('Home', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     storage.getGardenPlants.mockReturnValue([]);
+    storage.getGardenBeds.mockReturnValue([]);
     plantLibrary.getPlantById.mockImplementation((id) => {
       if (id === 'tomato') return mockTomato;
       if (id === 'lettuce') return mockLettuce;
@@ -109,51 +110,90 @@ describe('Home', () => {
   });
 
   describe('empty garden state', () => {
-    it('shows getting started section when no plants', () => {
-      renderHome();
-      expect(screen.getByText('Get Started with Square Gardening')).toBeInTheDocument();
+    describe('no beds and no plants', () => {
+      beforeEach(() => {
+        storage.getGardenBeds.mockReturnValue([]);
+        storage.getGardenPlants.mockReturnValue([]);
+      });
+
+      it('shows getting started section when no plants', () => {
+        renderHome();
+        expect(screen.getByText('Get Started with Square Gardening')).toBeInTheDocument();
+      });
+
+      it('shows create first bed button when no beds', () => {
+        renderHome();
+        expect(screen.getByText('Create Your First Bed')).toBeInTheDocument();
+      });
+
+      it('displays zero for all stats when no plants', () => {
+        renderHome();
+        const zeros = screen.getAllByText('0');
+        expect(zeros.length).toBe(3); // Total, Need Water, Ready to Harvest
+      });
+
+      it('shows prominent getting started section with enhanced styling', () => {
+        renderHome();
+        const heading = screen.getByText('Get Started with Square Gardening');
+        const section = heading.closest('div.bg-gradient-to-br');
+        expect(section).toBeInTheDocument();
+        expect(section).toHaveClass('bg-gradient-to-br', 'from-green-50', 'to-emerald-50', 'border-2', 'border-primary');
+      });
+
+      it('shows animated icon in getting started section', () => {
+        renderHome();
+        const heading = screen.getByText('Get Started with Square Gardening');
+        const section = heading.closest('div.bg-gradient-to-br');
+        const icon = section?.querySelector('.animate-bounce');
+        expect(icon).toBeInTheDocument();
+      });
+
+      it('shows enhanced call-to-action button', () => {
+        renderHome();
+        const button = screen.getByText('Create Your First Bed').closest('a');
+        expect(button).toBeInTheDocument();
+        expect(button).toHaveClass('inline-flex', 'items-center', 'gap-2', 'bg-primary', 'hover:bg-primary-light');
+      });
+
+      it('create first bed button includes bed icon', () => {
+        renderHome();
+        const button = screen.getByText('Create Your First Bed').closest('a');
+        const icon = button?.querySelector('.text-2xl');
+        expect(icon).toBeInTheDocument();
+        expect(icon?.textContent).toBe('🛏️');
+      });
+
+      it('shows create bed description', () => {
+        renderHome();
+        expect(screen.getByText(/Start by creating your first garden bed!/)).toBeInTheDocument();
+      });
     });
 
-    it('shows add first plant button when no plants', () => {
-      renderHome();
-      expect(screen.getByText('Add Your First Plant')).toBeInTheDocument();
-    });
+    describe('beds exist but no plants', () => {
+      beforeEach(() => {
+        storage.getGardenBeds.mockReturnValue([
+          { id: 'bed-1', name: 'Main Bed', width: 4, height: 4 }
+        ]);
+        storage.getGardenPlants.mockReturnValue([]);
+      });
 
-    it('displays zero for all stats when no plants', () => {
-      renderHome();
-      const zeros = screen.getAllByText('0');
-      expect(zeros.length).toBe(3); // Total, Need Water, Ready to Harvest
-    });
+      it('shows add first plant button when beds exist', () => {
+        renderHome();
+        expect(screen.getByText('Add Your First Plant')).toBeInTheDocument();
+      });
 
-    it('shows prominent getting started section with enhanced styling', () => {
-      renderHome();
-      const heading = screen.getByText('Get Started with Square Gardening');
-      const section = heading.closest('div.bg-gradient-to-br');
-      expect(section).toBeInTheDocument();
-      expect(section).toHaveClass('bg-gradient-to-br', 'from-green-50', 'to-emerald-50', 'border-2', 'border-primary');
-    });
+      it('add first plant button includes plant icon', () => {
+        renderHome();
+        const button = screen.getByText('Add Your First Plant').closest('a');
+        const icon = button?.querySelector('.text-2xl');
+        expect(icon).toBeInTheDocument();
+        expect(icon?.textContent).toBe('🌿');
+      });
 
-    it('shows animated icon in getting started section', () => {
-      renderHome();
-      const heading = screen.getByText('Get Started with Square Gardening');
-      const section = heading.closest('div.bg-gradient-to-br');
-      const icon = section?.querySelector('.animate-bounce');
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('shows enhanced call-to-action button', () => {
-      renderHome();
-      const button = screen.getByText('Add Your First Plant').closest('a');
-      expect(button).toBeInTheDocument();
-      expect(button).toHaveClass('inline-flex', 'items-center', 'gap-2', 'bg-primary', 'hover:bg-primary-light');
-    });
-
-    it('add first plant button includes icon', () => {
-      renderHome();
-      const button = screen.getByText('Add Your First Plant').closest('a');
-      const icon = button?.querySelector('.text-2xl');
-      expect(icon).toBeInTheDocument();
-      expect(icon?.textContent).toBe('🌿');
+      it('shows add plant description', () => {
+        renderHome();
+        expect(screen.getByText(/let us help you track watering schedules, harvests, and more!/)).toBeInTheDocument();
+      });
     });
   });
 
@@ -163,6 +203,9 @@ describe('Home', () => {
       const thirtyDaysAgo = new Date(today);
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      storage.getGardenBeds.mockReturnValue([
+        { id: 'bed-1', name: 'Main Bed', width: 4, height: 4 }
+      ]);
       storage.getGardenPlants.mockReturnValue([
         {
           id: 'garden-1',
@@ -193,9 +236,44 @@ describe('Home', () => {
       renderHome();
       expect(screen.queryByText('Get Started with Square Gardening')).not.toBeInTheDocument();
     });
+
+    it('shows "Your Garden is Growing" section', () => {
+      renderHome();
+      expect(screen.getByText('Your Garden is Growing')).toBeInTheDocument();
+    });
+
+    it('shows view your garden button', () => {
+      renderHome();
+      expect(screen.getByText('View Your Garden')).toBeInTheDocument();
+    });
+
+    it('view your garden button links to my-garden', () => {
+      renderHome();
+      const button = screen.getByText('View Your Garden').closest('a');
+      expect(button).toHaveAttribute('href', '/my-garden');
+    });
+
+    it('view your garden button includes flower icon', () => {
+      renderHome();
+      const button = screen.getByText('View Your Garden').closest('a');
+      const icon = button?.querySelector('.text-2xl');
+      expect(icon).toBeInTheDocument();
+      expect(icon?.textContent).toBe('🌻');
+    });
+
+    it('shows garden growing description', () => {
+      renderHome();
+      expect(screen.getByText(/Track your plants, monitor watering schedules, and see when your harvest will be ready!/)).toBeInTheDocument();
+    });
   });
 
   describe('upcoming harvests', () => {
+    beforeEach(() => {
+      storage.getGardenBeds.mockReturnValue([
+        { id: 'bed-1', name: 'Main Bed', width: 4, height: 4 }
+      ]);
+    });
+
     it('shows upcoming harvests section when plants ready soon', () => {
       const tenDaysAgo = new Date();
       tenDaysAgo.setDate(tenDaysAgo.getDate() - 35); // 35 days into 45-day lettuce
