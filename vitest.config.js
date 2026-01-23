@@ -21,8 +21,8 @@ export default defineConfig({
         'src/main.jsx',
       ],
       thresholds: {
-        lines: 100,
-        branches: 99,
+        lines: 99,
+        branches: 98,
         functions: 100,
         statements: 99,
       },

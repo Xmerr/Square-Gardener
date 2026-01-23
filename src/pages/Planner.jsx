@@ -5,7 +5,7 @@ import PlanningGrid from '../components/PlanningGrid';
 import PlantingTimeline from '../components/PlantingTimeline';
 import { getGardenBeds } from '../utils/storage';
 import { getFrostDates } from '../utils/frostDateStorage';
-import { generateArrangement } from '../utils/planningAlgorithm';
+import { generateArrangement, generateArrangementWithFill } from '../utils/planningAlgorithm';
 import { generatePlantingSchedule } from '../utils/plantingSchedule';
 
 function Planner() {
@@ -21,6 +21,8 @@ function Planner() {
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [lockedSquares, setLockedSquares] = useState(null);
+  const [fillMode, setFillMode] = useState(false);
 
   const handleFrostDatesSave = (dates) => {
     setFrostDates(dates);
@@ -38,6 +40,7 @@ function Planner() {
 
   const handleGeneratePlan = () => {
     setError(null);
+    setFillMode(false);
 
     try {
       const result = generateArrangement({
@@ -50,6 +53,7 @@ function Planner() {
       setArrangement(result);
       setHistory([result]);
       setHistoryIndex(0);
+      setLockedSquares(Array.from({ length: selectedBed.height }, () => Array(selectedBed.width).fill(false)));
 
       // Generate planting schedule if frost dates are available
       if (frostDates && frostDates.lastSpringFrost && frostDates.firstFallFrost) {
@@ -62,6 +66,7 @@ function Planner() {
       setSchedule([]);
       setHistory([]);
       setHistoryIndex(-1);
+      setLockedSquares(null);
     }
   };
 
@@ -91,12 +96,63 @@ function Planner() {
     handleGeneratePlan();
   };
 
+  const handleFillBed = () => {
+    setError(null);
+
+    try {
+      const result = generateArrangementWithFill({
+        width: selectedBed.width,
+        height: selectedBed.height,
+        plantSelections: selectedPlants,
+        lockedSquares: lockedSquares,
+        fillMode: true
+      });
+
+      setArrangement(result);
+      setFillMode(true);
+
+      // Add to history
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(result);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+
+      // Generate planting schedule if frost dates are available
+      if (frostDates && frostDates.lastSpringFrost && frostDates.firstFallFrost) {
+        const newSchedule = generatePlantingSchedule(selectedPlants, frostDates);
+        setSchedule(newSchedule);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleSquareDelete = (row, col) => {
+    if (!arrangement || !lockedSquares) return;
+
+    // Create new grid with deleted square
+    const newGrid = arrangement.grid.map(r => [...r]);
+    newGrid[row][col] = null;
+
+    // Mark square as locked (empty)
+    const newLockedSquares = lockedSquares.map(r => [...r]);
+    newLockedSquares[row][col] = true;
+
+    setLockedSquares(newLockedSquares);
+    handleArrangementChange({
+      ...arrangement,
+      grid: newGrid
+    });
+  };
+
   const handleBedChange = (bedId) => {
     const bed = beds.find(b => b.id === bedId);
     setSelectedBed(bed);
     setArrangement(null);
     setSchedule([]);
     setError(null);
+    setLockedSquares(null);
+    setFillMode(false);
   };
 
   return (
@@ -140,6 +196,7 @@ function Planner() {
                   availableSpace={selectedBed.width * selectedBed.height}
                   onSelectionChange={handleSelectionChange}
                   initialSelections={null}
+                  fillMode={fillMode}
                 />
 
                 {error && (
@@ -186,23 +243,37 @@ function Planner() {
                           </svg>
                         </button>
                       </div>
-                      <button
-                        onClick={handleRegenerate}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-                        title="Generate a new arrangement with the same plants"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerate
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleFillBed}
+                          disabled={!arrangement || arrangement.grid.flat().filter(p => p).length === selectedBed.width * selectedBed.height}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                          title="Fill remaining spaces with selected plants"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                          </svg>
+                          Fill Bed
+                        </button>
+                        <button
+                          onClick={handleRegenerate}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                          title="Generate a new arrangement with the same plants"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Regenerate
+                        </button>
+                      </div>
                     </div>
                     <PlanningGrid
                       arrangement={arrangement}
                       bed={selectedBed}
                       onSquareClick={null}
-                      lockedSquares={null}
+                      lockedSquares={lockedSquares}
                       onArrangementChange={handleArrangementChange}
+                      onSquareDelete={handleSquareDelete}
                       editable={true}
                     />
                   </>

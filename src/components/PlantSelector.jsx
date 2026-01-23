@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { plantLibrary, getPlantById } from '../data/plantLibrary';
 import { getCurrentSeason } from '../utils/dateFormatting';
 
-function PlantSelector({ availableSpace, onSelectionChange, initialSelections }) {
+function PlantSelector({ availableSpace, onSelectionChange, initialSelections, fillMode = false }) {
   const [selections, setSelections] = useState(() => {
     if (initialSelections) {
       return initialSelections;
@@ -34,13 +34,15 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections })
       if (quantity > 0) {
         const plant = getPlantById(plantId);
         if (plant) {
-          const spaceNeeded = quantity * plant.squaresPerPlant;
+          // quantity now represents square feet directly
+          const spaceNeeded = quantity;
           totalRequired += spaceNeeded;
           selectedPlants.push({
             plantId,
             name: plant.name,
             quantity,
-            spaceNeeded
+            spaceNeeded,
+            plantsCount: Math.round(quantity / plant.squaresPerPlant)
           });
         }
       }
@@ -133,14 +135,14 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections })
         <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Selected Plants ({spaceCalculation.selectedPlants.length})</h3>
           <div className="flex flex-wrap gap-2">
-            {spaceCalculation.selectedPlants.map(({ plantId, name, quantity, spaceNeeded }) => (
+            {spaceCalculation.selectedPlants.map(({ plantId, name, quantity, plantsCount }) => (
               <span
                 key={plantId}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-white rounded-full text-sm border border-primary/30"
               >
                 <span className="font-medium">{name}</span>
-                <span className="text-gray-500">×{quantity}</span>
-                <span className="text-xs text-gray-400">({spaceNeeded} sq ft)</span>
+                <span className="text-gray-500">{quantity} sq ft</span>
+                <span className="text-xs text-gray-400">({plantsCount} plants)</span>
                 <button
                   onClick={() => handleQuantityChange(plantId, 0)}
                   className="ml-1 text-gray-400 hover:text-red-500"
@@ -207,7 +209,7 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections })
               {isSelected && (
                 <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                   <label htmlFor={`quantity-${plant.id}`} className="text-sm text-gray-600">
-                    Qty:
+                    {fillMode ? 'Min sq ft:' : 'Sq ft:'}
                   </label>
                   <input
                     id={`quantity-${plant.id}`}
@@ -218,7 +220,7 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections })
                     className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-primary"
                   />
                   <span className="text-xs text-gray-500">
-                    = {Math.round(quantity * plant.squaresPerPlant * 100) / 100} sq ft
+                    = {Math.round(quantity / plant.squaresPerPlant)} plants
                   </span>
                 </div>
               )}
@@ -251,7 +253,8 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections })
 PlantSelector.propTypes = {
   availableSpace: PropTypes.number.isRequired,
   onSelectionChange: PropTypes.func,
-  initialSelections: PropTypes.objectOf(PropTypes.number)
+  initialSelections: PropTypes.objectOf(PropTypes.number),
+  fillMode: PropTypes.bool
 };
 
 export default PlantSelector;

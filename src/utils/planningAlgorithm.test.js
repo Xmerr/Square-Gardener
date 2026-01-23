@@ -8,7 +8,10 @@ import {
   findBestPosition,
   generateArrangement,
   validateArrangement,
-  getArrangementStats
+  getArrangementStats,
+  isBridgePlant,
+  findBridgePlants,
+  generateArrangementWithFill
 } from './planningAlgorithm';
 
 describe('planningAlgorithm', () => {
@@ -145,7 +148,8 @@ describe('planningAlgorithm', () => {
   });
 
   describe('sortByConstraintDifficulty', () => {
-    it('should expand plant selections based on squaresPerPlant', () => {
+    it('should expand plant selections based on quantity (square feet)', () => {
+      // quantity now represents square feet directly (2 sq ft = 2 squares)
       const selections = [{ plantId: 'tomato', quantity: 2 }];
       const sorted = sortByConstraintDifficulty(selections);
       expect(sorted).toHaveLength(2);
@@ -179,11 +183,11 @@ describe('planningAlgorithm', () => {
       expect(sorted[0]).toBe('tomato');
     });
 
-    it('should handle plants with fractional squaresPerPlant', () => {
-      // Lettuce is 0.25 sq ft per plant, so 4 plants need 1 square
+    it('should handle fractional square feet by rounding up', () => {
+      // quantity represents sq ft directly (4 sq ft = 4 squares)
       const selections = [{ plantId: 'lettuce', quantity: 4 }];
       const sorted = sortByConstraintDifficulty(selections);
-      expect(sorted).toHaveLength(1);
+      expect(sorted).toHaveLength(4);
     });
   });
 
@@ -551,6 +555,305 @@ describe('planningAlgorithm', () => {
       const stats = getArrangementStats(grid);
       expect(stats.filledSquares).toBe(3);
       expect(stats.uniquePlants).toBe(1);
+    });
+  });
+
+  describe('isBridgePlant', () => {
+    it('should return false if two plants are not enemies', () => {
+      // tomato and basil are companions, not enemies
+      expect(isBridgePlant('carrot', 'tomato', 'basil')).toBe(false);
+    });
+
+    it('should return true if bridge plant is compatible with both enemies', () => {
+      // tomato and cabbage are enemies
+      // carrot is compatible with both tomato and cabbage
+      expect(isBridgePlant('carrot', 'tomato', 'cabbage')).toBe(true);
+    });
+
+    it('should return false if bridge plant is incompatible with first enemy', () => {
+      // tomato and cabbage are enemies
+      // potato avoids tomato, so it cannot be a bridge
+      expect(isBridgePlant('potato', 'tomato', 'cabbage')).toBe(false);
+    });
+
+    it('should return false if bridge plant is incompatible with second enemy', () => {
+      // tomato and broccoli are enemies
+      // cabbage avoids tomato but is incompatible with broccoli (same family)
+      expect(isBridgePlant('cabbage', 'tomato', 'broccoli')).toBe(false);
+    });
+  });
+
+  describe('findBridgePlants', () => {
+    it('should find plants that can bridge two enemies', () => {
+      const availablePlants = ['carrot', 'basil', 'lettuce', 'potato'];
+      const bridges = findBridgePlants('tomato', 'cabbage', availablePlants);
+
+      // carrot is compatible with both tomato and cabbage
+      expect(bridges).toContain('carrot');
+      // potato avoids tomato, so should not be a bridge
+      expect(bridges).not.toContain('potato');
+    });
+
+    it('should return empty array if no bridges exist', () => {
+      const availablePlants = ['potato']; // potato avoids tomato
+      const bridges = findBridgePlants('tomato', 'cabbage', availablePlants);
+      expect(bridges).toHaveLength(0);
+    });
+
+    it('should return empty array if plants are not enemies', () => {
+      const availablePlants = ['carrot', 'basil'];
+      const bridges = findBridgePlants('tomato', 'basil', availablePlants);
+      expect(bridges).toHaveLength(0);
+    });
+  });
+
+  describe('generateArrangementWithFill', () => {
+    describe('without fill mode', () => {
+      it('should behave like generateArrangement when fillMode is false', () => {
+        const result = generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+          fillMode: false
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.placements).toHaveLength(2);
+      });
+
+      it('should throw error for invalid dimensions', () => {
+        expect(() => generateArrangementWithFill({
+          width: 0,
+          height: 2,
+          plantSelections: [],
+          fillMode: false
+        })).toThrow('Invalid bed dimensions');
+      });
+
+      it('should throw error for invalid plant selections', () => {
+        expect(() => generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: null,
+          fillMode: false
+        })).toThrow('Plant selections must be an array');
+      });
+
+      it('should handle unplaced plants in fillMode=false (coverage for line 406)', () => {
+        // Create a scenario where a plant cannot be placed in exact quantity mode
+        expect(() => generateArrangementWithFill({
+          width: 1,
+          height: 2,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'potato', quantity: 1 }
+          ],
+          fillMode: false
+        })).toThrow(/Could not place all plants/);
+      });
+    });
+
+    describe('with fill mode', () => {
+      it('should fill remaining space with selected plants', () => {
+        const result = generateArrangementWithFill({
+          width: 4,
+          height: 4,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 2 },
+            { plantId: 'basil', quantity: 2 }
+          ],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        // Should fill more than minimum (2+2=4)
+        expect(result.placements.length).toBeGreaterThan(4);
+        // Should not exceed total available space
+        expect(result.placements.length).toBeLessThanOrEqual(16);
+      });
+
+      it('should respect minimum quantities', () => {
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 3,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 3 },
+            { plantId: 'basil', quantity: 1 }
+          ],
+          fillMode: true
+        });
+
+        const tomatoCount = result.placements.filter(p => p.plantId === 'tomato').length;
+        const basilCount = result.placements.filter(p => p.plantId === 'basil').length;
+
+        expect(tomatoCount).toBeGreaterThanOrEqual(3);
+        expect(basilCount).toBeGreaterThanOrEqual(1);
+      });
+
+      it('should respect locked squares', () => {
+        const lockedSquares = [
+          [true, false, false],
+          [false, true, false],
+          [false, false, true]
+        ];
+
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 3,
+          plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+          lockedSquares,
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        // Should not place in locked positions
+        expect(result.grid[0][0]).toBe(null);
+        expect(result.grid[1][1]).toBe(null);
+        expect(result.grid[2][2]).toBe(null);
+        // Should fill available squares (6 unlocked)
+        expect(result.placements.length).toBeLessThanOrEqual(6);
+      });
+
+      it('should maintain proportional distribution', () => {
+        const result = generateArrangementWithFill({
+          width: 4,
+          height: 4,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'basil', quantity: 1 }
+          ],
+          fillMode: true
+        });
+
+        const tomatoCount = result.placements.filter(p => p.plantId === 'tomato').length;
+        const basilCount = result.placements.filter(p => p.plantId === 'basil').length;
+
+        // Should have roughly equal distribution (within 50% of each other)
+        const ratio = Math.max(tomatoCount, basilCount) / Math.min(tomatoCount, basilCount);
+        expect(ratio).toBeLessThanOrEqual(2);
+      });
+
+      it('should throw error if minimums cannot be placed', () => {
+        expect(() => generateArrangementWithFill({
+          width: 1,
+          height: 2,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'potato', quantity: 1 }
+          ],
+          fillMode: true
+        })).toThrow(/Could not place minimum plant quantities/);
+      });
+
+      it('should handle case where bed fills completely', () => {
+        const result = generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'basil', quantity: 1 }
+          ],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        const filledCount = result.grid.flat().filter(p => p).length;
+        expect(filledCount).toBe(4);
+      });
+
+      it('should stop filling when no valid positions remain', () => {
+        // Create a scenario where enemies prevent full fill
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 1,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'potato', quantity: 1 }
+          ],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        // May not fill all 3 squares due to enemy constraints
+        const filledCount = result.grid.flat().filter(p => p).length;
+        expect(filledCount).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should validate no enemy adjacencies in filled arrangement', () => {
+        const result = generateArrangementWithFill({
+          width: 4,
+          height: 4,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 2 },
+            { plantId: 'basil', quantity: 2 }
+          ],
+          fillMode: true
+        });
+
+        const validation = validateArrangement(result.grid);
+        expect(validation.valid).toBe(true);
+        expect(validation.violations).toHaveLength(0);
+      });
+
+      it('should handle single plant type fill', () => {
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 3,
+          plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        // Should fill as much as possible with tomatoes
+        expect(result.placements.filter(p => p.plantId === 'tomato').length).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should use default locked squares when not provided', () => {
+        const result = generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [{ plantId: 'tomato', quantity: 1 }],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+      });
+
+      it('should throw error when plants exceed available space in fillMode=false', () => {
+        expect(() => generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [{ plantId: 'tomato', quantity: 10 }],
+          fillMode: false
+        })).toThrow(/Not enough space/);
+      });
+
+      it('should throw error when minimums cannot be placed in fillMode=true (too many plants)', () => {
+        expect(() => generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [{ plantId: 'tomato', quantity: 10 }],
+          fillMode: true
+        })).toThrow(/Not enough space/);
+      });
+
+      it('should stop filling when no valid position found (coverage for else at 504)', () => {
+        // Create a scenario where the algorithm tries to fill but cannot find more valid positions
+        // Use a grid where there's room, but filling is constrained
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 1,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 }, // Will fill remaining
+            { plantId: 'basil', quantity: 1 }
+          ],
+          fillMode: true
+        });
+
+        expect(result.success).toBe(true);
+        // Should fill the grid (3 squares available)
+        expect(result.placements.length).toBe(3);
+      });
     });
   });
 });

@@ -59,7 +59,7 @@ describe('PlantSelector', () => {
       expect(screen.getByText('Selected Plants (2)')).toBeInTheDocument();
       // Tomato appears multiple times (in grid and in selected list)
       expect(screen.getAllByText('Tomato').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText('×2')).toBeInTheDocument();
+      expect(screen.getByText('2 sq ft')).toBeInTheDocument();
     });
   });
 
@@ -88,13 +88,13 @@ describe('PlantSelector', () => {
     it('should show quantity input when plant is selected', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      expect(screen.getByLabelText('Qty:')).toBeInTheDocument();
+      expect(screen.getByLabelText('Sq ft:')).toBeInTheDocument();
     });
 
     it('should update quantity when input changes', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      const quantityInput = screen.getByLabelText('Qty:');
+      const quantityInput = screen.getByLabelText('Sq ft:');
       fireEvent.change(quantityInput, { target: { value: '3' } });
 
       expect(defaultProps.onSelectionChange).toHaveBeenCalledWith([
@@ -105,7 +105,7 @@ describe('PlantSelector', () => {
     it('should remove plant when quantity is set to 0', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      const quantityInput = screen.getByLabelText('Qty:');
+      const quantityInput = screen.getByLabelText('Sq ft:');
       fireEvent.change(quantityInput, { target: { value: '0' } });
 
       expect(defaultProps.onSelectionChange).toHaveBeenCalledWith([]);
@@ -114,7 +114,7 @@ describe('PlantSelector', () => {
     it('should handle invalid quantity input', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      const quantityInput = screen.getByLabelText('Qty:');
+      const quantityInput = screen.getByLabelText('Sq ft:');
       fireEvent.change(quantityInput, { target: { value: 'abc' } });
 
       // Should treat invalid input as 0
@@ -124,7 +124,7 @@ describe('PlantSelector', () => {
     it('should handle negative quantity input', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      const quantityInput = screen.getByLabelText('Qty:');
+      const quantityInput = screen.getByLabelText('Sq ft:');
       fireEvent.change(quantityInput, { target: { value: '-5' } });
 
       // Should treat negative as 0
@@ -151,10 +151,10 @@ describe('PlantSelector', () => {
     });
 
     it('should calculate space correctly for fractional plants', () => {
-      // Lettuce uses 0.25 sq ft per plant
+      // quantity now represents sq ft directly (4 sq ft = 4 sq ft)
       render(<PlantSelector {...defaultProps} initialSelections={{ lettuce: 4 }} />);
 
-      expect(screen.getByText('1 / 16 sq ft')).toBeInTheDocument();
+      expect(screen.getByText('4 / 16 sq ft')).toBeInTheDocument();
     });
 
     it('should ignore invalid plant ids in initial selections', () => {
@@ -173,6 +173,7 @@ describe('PlantSelector', () => {
     });
 
     it('should show over capacity warning', () => {
+      // 5 sq ft exceeds 4 sq ft capacity
       render(<PlantSelector {...defaultProps} availableSpace={4} initialSelections={{ tomato: 5 }} />);
 
       expect(screen.getByText(/Over capacity by/)).toBeInTheDocument();
@@ -297,10 +298,11 @@ describe('PlantSelector', () => {
       expect(screen.queryByText(/Selected Plants/)).not.toBeInTheDocument();
     });
 
-    it('should show space needed per plant in selected list', () => {
+    it('should show plant count in selected list', () => {
+      // 2 sq ft of tomatoes = 2 plants (tomato is 1 sq ft per plant)
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 2 }} />);
 
-      expect(screen.getByText('(2 sq ft)')).toBeInTheDocument();
+      expect(screen.getByText('(2 plants)')).toBeInTheDocument();
     });
   });
 
@@ -308,7 +310,7 @@ describe('PlantSelector', () => {
     it('should not toggle selection when clicking quantity input area', () => {
       render(<PlantSelector {...defaultProps} initialSelections={{ tomato: 1 }} />);
 
-      const quantityInput = screen.getByLabelText('Qty:');
+      const quantityInput = screen.getByLabelText('Sq ft:');
       fireEvent.click(quantityInput);
 
       // Should not remove the selection
