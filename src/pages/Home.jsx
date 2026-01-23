@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getGardenPlants } from '../utils/storage';
+import { getGardenPlants, getGardenBeds } from '../utils/storage';
 import { getPlantById } from '../data/plantLibrary';
 
 function Home() {
   const [stats, setStats] = useState({
     totalPlants: 0,
     plantsNeedingWater: 0,
-    upcomingHarvests: []
+    upcomingHarvests: [],
+    hasBeds: false
   });
 
   useEffect(() => {
     const gardenPlants = getGardenPlants();
+    const gardenBeds = getGardenBeds();
     const today = new Date();
 
     // Calculate plants needing water
@@ -44,11 +46,13 @@ function Home() {
       .sort((a, b) => a.daysRemaining - b.daysRemaining)
       .slice(0, 5);
 
+    // Loading initial data from localStorage on mount is the correct pattern here
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStats({
       totalPlants: gardenPlants.length,
       plantsNeedingWater,
-      upcomingHarvests
+      upcomingHarvests,
+      hasBeds: gardenBeds.length > 0
     });
   }, []);
 
@@ -68,15 +72,39 @@ function Home() {
               Get Started with Square Gardening
             </h2>
             <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto leading-relaxed">
-              Square Foot Gardening is a simple way to grow more food in less space. Start by adding
-              plants to your garden and let us help you track watering schedules, harvests, and more!
+              {!stats.hasBeds
+                ? 'Square Foot Gardening is a simple way to grow more food in less space. Start by creating your first garden bed!'
+                : 'Square Foot Gardening is a simple way to grow more food in less space. Start by adding plants to your garden and let us help you track watering schedules, harvests, and more!'
+              }
             </p>
             <Link
               to="/my-garden"
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-bold text-lg py-4 px-10 rounded-xl transition-all transform hover:scale-105 shadow-md hover:shadow-xl"
             >
-              <span className="text-2xl">🌿</span>
-              <span>Add Your First Plant</span>
+              <span className="text-2xl">{!stats.hasBeds ? '🛏️' : '🌿'}</span>
+              <span>{!stats.hasBeds ? 'Create Your First Bed' : 'Add Your First Plant'}</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* View Your Garden - For Existing Users */}
+      {stats.totalPlants > 0 && (
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 shadow-lg border-2 border-primary mb-8">
+          <div className="text-center">
+            <div className="text-7xl mb-4">🌿</div>
+            <h2 className="text-3xl font-bold text-primary mb-4">
+              Your Garden is Growing
+            </h2>
+            <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto leading-relaxed">
+              Track your plants, monitor watering schedules, and see when your harvest will be ready!
+            </p>
+            <Link
+              to="/my-garden"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-light text-white font-bold text-lg py-4 px-10 rounded-xl transition-all transform hover:scale-105 shadow-md hover:shadow-xl"
+            >
+              <span className="text-2xl">🌻</span>
+              <span>View Your Garden</span>
             </Link>
           </div>
         </div>

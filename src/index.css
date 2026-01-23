@@ -15,3 +15,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Global focus-visible styles for accessibility */
+*:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

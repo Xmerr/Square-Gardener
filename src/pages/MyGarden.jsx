@@ -14,7 +14,6 @@ import {
   getBedCapacity,
   addGardenBed
 } from '../utils/storage';
-import { getCurrentSeason } from '../utils/dateFormatting';
 
 function MyGarden() {
   const [gardenPlants, setGardenPlants] = useState(() => getGardenPlants());
@@ -26,7 +25,7 @@ function MyGarden() {
   const [selectedPlantId, setSelectedPlantId] = useState(null);
   const [plantQuantity, setPlantQuantity] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSeason, setFilterSeason] = useState(getCurrentSeason());
+  const [filterSeason, setFilterSeason] = useState('all');
   const [editingPlant, setEditingPlant] = useState(null);
 
   const capacities = useMemo(() => {

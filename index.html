@@ -9,21 +9,27 @@
       // GitHub Pages SPA redirect handler
       // Decode the route from the query string and restore it via History API
       (function() {
-        var redirect = sessionStorage.redirect;
-        delete sessionStorage.redirect;
-        if (redirect && redirect !== location.href) {
-          history.replaceState(null, null, redirect);
-        }
-      })();
-
-      // Store the redirect target before the React app loads
-      (function() {
         var l = window.location;
-        if (l.search[1] === '/') {
+        // Check if this is a redirect from 404.html (query string starts with ?/)
+        if (l.search && l.search[1] === '/') {
+          // Decode the path from the query string
           var decoded = l.search.slice(1).split('&').map(function(s) {
             return s.replace(/~and~/g, '&');
           }).join('?');
-          sessionStorage.redirect = l.pathname.slice(0, -1) + decoded + l.hash;
+
+          // Build the full redirect path
+          var pathname = l.pathname;
+          // Remove trailing slash if present
+          if (pathname.endsWith('/')) {
+            pathname = pathname.slice(0, -1);
+          }
+
+          var redirect = pathname + decoded + l.hash;
+
+          // Restore the original URL using History API
+          if (redirect !== l.href) {
+            history.replaceState(null, null, redirect);
+          }
         }
       })();
     </script>
