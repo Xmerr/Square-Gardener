@@ -19,7 +19,6 @@ describe('Navigation', () => {
       const links = screen.getAllByText('🏠 Home');
       expect(links.length).toBeGreaterThan(0);
       expect(screen.getAllByText('🌿 My Garden').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('💧 Watering').length).toBeGreaterThan(0);
       expect(screen.getAllByText('📐 Planner').length).toBeGreaterThan(0);
       expect(screen.getAllByText('📅 Calendar').length).toBeGreaterThan(0);
     });
@@ -36,13 +35,6 @@ describe('Navigation', () => {
       const gardenLinks = screen.getAllByText('🌿 My Garden');
       const gardenLink = gardenLinks[0].closest('a');
       expect(gardenLink).toHaveAttribute('href', '/my-garden');
-    });
-
-    it('watering link has correct href', () => {
-      renderWithRouter();
-      const wateringLinks = screen.getAllByText('💧 Watering');
-      const wateringLink = wateringLinks[0].closest('a');
-      expect(wateringLink).toHaveAttribute('href', '/watering');
     });
 
     it('planner link has correct href', () => {
@@ -71,13 +63,6 @@ describe('Navigation', () => {
       const gardenLinks = screen.getAllByText('🌿 My Garden');
       const gardenLink = gardenLinks[0].closest('a');
       expect(gardenLink.className).toContain('text-gray-700');
-    });
-
-    it('applies active class to watering route', () => {
-      renderWithRouter(['/watering']);
-      const wateringLinks = screen.getAllByText('💧 Watering');
-      const wateringLink = wateringLinks[0].closest('a');
-      expect(wateringLink.className).toContain('bg-primary');
     });
 
     it('applies active class to planner route', () => {
@@ -186,16 +171,16 @@ describe('Navigation', () => {
 
     it('applies correct styling to mobile menu links', async () => {
       const user = userEvent.setup();
-      renderWithRouter(['/watering']);
+      renderWithRouter(['/planner']);
       const menuButton = screen.getByLabelText('Toggle navigation menu');
 
       await user.click(menuButton);
 
-      const wateringLinks = screen.getAllByText('💧 Watering');
-      const mobileWateringLink = wateringLinks.find(
+      const plannerLinks = screen.getAllByText('📐 Planner');
+      const mobilePlannerLink = plannerLinks.find(
         link => link.closest('a')?.className.includes('block')
       );
-      const linkElement = mobileWateringLink.closest('a');
+      const linkElement = mobilePlannerLink.closest('a');
 
       expect(linkElement.className).toContain('block');
       expect(linkElement.className).toContain('bg-primary');
@@ -271,7 +256,6 @@ describe('Navigation', () => {
       const allLinks = [
         '🏠 Home',
         '🌿 My Garden',
-        '💧 Watering',
         '📐 Planner',
         '📅 Calendar',
       ];
@@ -296,7 +280,6 @@ describe('Navigation', () => {
       const allLinks = [
         '🏠 Home',
         '🌿 My Garden',
-        '💧 Watering',
         '📐 Planner',
         '📅 Calendar',
       ];

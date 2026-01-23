@@ -28,7 +28,6 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByText(/🏠 Home/)).toBeInTheDocument();
     expect(screen.getByText(/🌿 My Garden/)).toBeInTheDocument();
-    expect(screen.getByText(/💧 Watering/)).toBeInTheDocument();
     expect(screen.getByText(/📐 Planner/)).toBeInTheDocument();
     expect(screen.getByText(/📅 Calendar/)).toBeInTheDocument();
   });

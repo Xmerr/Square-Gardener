@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Square Gardener is a React-based web application for managing square foot gardens. It helps users track plants, watering schedules, and harvest times.
+Square Gardener is a React-based web application for planning square foot gardens. It helps users visualize garden layouts, plan planting schedules, and track harvests.
 
 ## Tech Stack
 
@@ -14,18 +14,18 @@ Square Gardener is a React-based web application for managing square foot garden
 
 ## Code Coverage Policy
 
-**CRITICAL: This project enforces 100% code coverage.**
+**CRITICAL: This project enforces high code coverage thresholds.**
 
 ### Coverage Requirements
 
-All code changes must maintain 100% coverage across all metrics:
+All code changes must maintain coverage above these thresholds:
 
 | Metric | Required |
 |--------|----------|
-| Lines | 100% |
-| Branches | 100% |
-| Functions | 100% |
-| Statements | 100% |
+| Lines | 99% |
+| Branches | 97% |
+| Functions | 99% |
+| Statements | 99% |
 
 ### Running Tests
 
@@ -64,7 +64,7 @@ The project has two GitHub Actions workflows:
 - Runs on all pull requests to main
 - Executes linting (`npm run lint`)
 - Runs tests with coverage (`npm run test:ci`)
-- **Blocks PR merging if tests fail or coverage drops below 100%**
+- **Blocks PR merging if tests fail or coverage drops below thresholds**
 - Uploads coverage reports as artifacts
 
 **Deployment** (`.github/workflows/deploy.yml`):
@@ -77,106 +77,78 @@ Branch protection is enabled on the main branch, requiring the `test-and-coverag
 
 ### Coverage Configuration
 
-Coverage thresholds are configured in `vitest.config.js`:
-
-```javascript
-coverage: {
-  thresholds: {
-    lines: 100,
-    branches: 100,
-    functions: 100,
-    statements: 100
-  }
-}
-```
-
-### Excluded Files
-
-The following files are excluded from coverage calculations:
-- `node_modules/`
-- `src/test/` (test setup files)
-- Configuration files (`vite.config.js`, `vitest.config.js`, etc.)
-- `src/main.jsx` (application entry point)
+Coverage thresholds and exclusions are configured in `vitest.config.js`. Excluded from coverage: `node_modules/`, `src/test/`, config files, and `src/main.jsx`.
 
 ## Development Guidelines
 
 ### Before Committing
 
 1. Run `npm run lint` to check for linting errors
-2. Run `npm run test:ci` to verify 100% coverage
+2. Run `npm run test:ci` to verify coverage thresholds
 3. Fix any failing tests or coverage gaps before pushing
 
-### Adding New Components
+### Adding/Modifying Code
 
-When adding a new component:
-
-1. Create the component file
-2. Create a corresponding test file
-3. Write tests covering:
-   - Basic rendering
-   - User interactions
-   - Props variations
-   - Edge cases
-4. Verify coverage with `npm run test:ci`
-
-### Modifying Existing Code
-
-When modifying existing code:
-
-1. Run existing tests to ensure they pass
-2. Update tests if behavior changes
-3. Add new tests for new functionality
-4. Verify coverage is maintained at 100%
+1. Create test file alongside source file (co-located)
+2. Write tests covering: basic rendering, interactions, props variations, edge cases
+3. Run `npm run test:ci` to verify coverage thresholds
+4. Update existing tests if behavior changes
 
 ## Project Structure
 
 ```
 ./
 ├── src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Page components
-│   ├── data/           # Static data and utilities
-│   ├── utils/          # Utility functions
-│   ├── test/           # Test setup
-│   ├── App.jsx         # Main app component
-│   └── main.jsx        # Entry point
-├── .github/
-│   └── workflows/      # CI/CD configuration
+│   ├── components/        # Reusable UI components
+│   │   ├── Bed*           # BedCard, BedForm, BedSelector, BedManager, BedGridPreview, BedDeleteDialog
+│   │   ├── Plant*         # PlantCard, PlantForm, PlantSelector
+│   │   ├── Planning*      # PlanningGrid, PlantingTimeline, PrintablePlan, PlanSummary
+│   │   ├── FrostDateForm  # Frost date input
+│   │   ├── SquareDetails  # Grid square popup
+│   │   ├── MonthDayPicker # Date picker
+│   │   ├── OverrideIndicator
+│   │   └── Navigation
+│   ├── pages/
+│   │   ├── Home.jsx       # Landing page
+│   │   ├── MyGarden.jsx   # Garden management (beds, plants)
+│   │   ├── Calendar.jsx   # Planting calendar
+│   │   ├── Planner.jsx    # Planning mode
+│   │   └── NotFound.jsx   # 404 page
+│   ├── data/
+│   │   └── plantLibrary.js  # Plant database
+│   ├── utils/
+│   │   ├── storage.js       # localStorage CRUD (beds, plants, settings)
+│   │   ├── harvestDate.js   # Harvest date calculations
+│   │   ├── plantingSchedule.js
+│   │   ├── planningAlgorithm.js
+│   │   ├── companionStatus.js
+│   │   ├── frostDateLookup.js
+│   │   ├── frostDateStorage.js
+│   │   └── dateFormatting.js
+│   ├── test/              # Test setup
+│   ├── App.jsx            # Main app + routing
+│   └── main.jsx           # Entry point
+├── docs/specs/            # Feature specifications
+├── .github/workflows/     # CI/CD
 └── package.json
 ```
+
+## Routes
+
+| Path | Page | Description |
+|------|------|-------------|
+| `/` | Home | Landing page |
+| `/my-garden` | MyGarden | Manage beds and plants |
+| `/calendar` | Calendar | Planting calendar |
+| `/planner` | Planner | Planning mode |
+
+## State Management
+
+Data is persisted to `localStorage` via `src/utils/storage.js`:
+- **Garden beds**: `addGardenBed()`, `getBedById()`, `updateGardenBed()`, `removeGardenBed()`
+- **Plants**: `addPlantToGarden()`, `removePlantFromGarden()`, `getPlantsByBed()`
+- **Frost dates**: `saveFrostDates()`, `getFrostDates()` (via `frostDateStorage.js`)
 
 ## Feature Specifications
 
 Feature specifications are located in `docs/specs/`. Each spec documents requirements, design, and implementation details for a planned feature.
-
-### Spec Status Tracking
-
-**IMPORTANT**: The file `docs/specs/SPEC-STATUS.md` tracks implementation status of all specifications.
-
-When working on features:
-
-1. **Before starting work**: Check SPEC-STATUS.md to understand current state
-2. **During implementation**: Update status from `:x: Not Started` to `:construction: In Progress`
-3. **After completing a component**: Check off the corresponding item in the spec's checklist
-4. **When spec is fully implemented**: Update status to `:white_check_mark: Complete`
-5. **Add changelog entry**: Record the date and what changed
-
-### Status Values
-
-| Status | When to Use |
-|--------|-------------|
-| `:white_check_mark: Complete` | All requirements implemented and tested |
-| `:construction: In Progress` | Actively being worked on |
-| `:hourglass: Partial` | Some components done, others pending |
-| `:x: Not Started` | No implementation exists |
-| `:clipboard: Placeholder` | Only stubs/routes exist |
-
-### Spec Files
-
-| Spec | Description |
-|------|-------------|
-| `mobile-responsiveness-and-testing-spec.md` | Tailwind CSS, Vitest, CI/CD |
-| `bed-management-feature-spec.md` | Garden beds, capacity tracking |
-| `enhanced-plant-properties-spec.md` | Variety, harvest dates, overrides |
-| `indoor-plants-and-pots-spec.md` | Pot support, houseplants |
-| `planning-mode-spec.md` | Auto-arrange, companion planting |

@@ -22,7 +22,6 @@ function Navigation() {
   const links = [
     { to: '/', label: '🏠 Home' },
     { to: '/my-garden', label: '🌿 My Garden' },
-    { to: '/watering', label: '💧 Watering' },
     { to: '/planner', label: '📐 Planner' },
     { to: '/calendar', label: '📅 Calendar' },
   ];

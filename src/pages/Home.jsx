@@ -6,7 +6,6 @@ import { getPlantById } from '../data/plantLibrary';
 function Home() {
   const [stats, setStats] = useState({
     totalPlants: 0,
-    plantsNeedingWater: 0,
     upcomingHarvests: [],
     hasBeds: false
   });
@@ -15,16 +14,6 @@ function Home() {
     const gardenPlants = getGardenPlants();
     const gardenBeds = getGardenBeds();
     const today = new Date();
-
-    // Calculate plants needing water
-    const plantsNeedingWater = gardenPlants.filter(gp => {
-      const plant = getPlantById(gp.plantId);
-      if (!plant) return false;
-
-      const lastWatered = new Date(gp.lastWatered);
-      const daysSinceWatered = Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24));
-      return daysSinceWatered >= plant.wateringFrequency;
-    }).length;
 
     // Calculate upcoming harvests (next 30 days)
     const upcomingHarvests = gardenPlants
@@ -50,7 +39,6 @@ function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStats({
       totalPlants: gardenPlants.length,
-      plantsNeedingWater,
       upcomingHarvests,
       hasBeds: gardenBeds.length > 0
     });
@@ -74,7 +62,7 @@ function Home() {
             <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto leading-relaxed">
               {!stats.hasBeds
                 ? 'Square Foot Gardening is a simple way to grow more food in less space. Start by creating your first garden bed!'
-                : 'Square Foot Gardening is a simple way to grow more food in less space. Start by adding plants to your garden and let us help you track watering schedules, harvests, and more!'
+                : 'Square Foot Gardening is a simple way to grow more food in less space. Start by adding plants to your garden and let us help you plan layouts, track harvests, and more!'
               }
             </p>
             <Link
@@ -97,7 +85,7 @@ function Home() {
               Your Garden is Growing
             </h2>
             <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto leading-relaxed">
-              Track your plants, monitor watering schedules, and see when your harvest will be ready!
+              Track your plants, plan your layout, and see when your harvest will be ready!
             </p>
             <Link
               to="/my-garden"
@@ -111,7 +99,7 @@ function Home() {
       )}
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Link
           to="/my-garden"
           className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
@@ -122,19 +110,6 @@ function Home() {
               <p className="text-4xl font-bold">{stats.totalPlants}</p>
             </div>
             <div className="text-5xl opacity-80">🌱</div>
-          </div>
-        </Link>
-
-        <Link
-          to="/watering"
-          className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm uppercase tracking-wide mb-1">Need Water</p>
-              <p className="text-4xl font-bold">{stats.plantsNeedingWater}</p>
-            </div>
-            <div className="text-5xl opacity-80">💧</div>
           </div>
         </Link>
 
@@ -170,14 +145,14 @@ function Home() {
         </Link>
 
         <Link
-          to="/watering"
+          to="/planner"
           className="bg-card rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary"
         >
           <div className="flex items-center gap-4">
-            <div className="text-5xl">💧</div>
+            <div className="text-5xl">📐</div>
             <div>
-              <h3 className="text-xl font-semibold text-primary mb-1">Watering Schedule</h3>
-              <p className="text-gray-600">Track and update watering</p>
+              <h3 className="text-xl font-semibold text-primary mb-1">Garden Planner</h3>
+              <p className="text-gray-600">Plan your garden layout</p>
             </div>
           </div>
         </Link>

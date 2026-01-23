@@ -56,13 +56,6 @@ describe('NotFound', () => {
       expect(screen.getByText('Quick Navigation')).toBeInTheDocument();
     });
 
-    it('renders Watering link', () => {
-      renderNotFound();
-      const wateringLink = screen.getByText('💧 Watering');
-      expect(wateringLink).toBeInTheDocument();
-      expect(wateringLink.closest('a')).toHaveAttribute('href', '/watering');
-    });
-
     it('renders Planner link', () => {
       renderNotFound();
       const plannerLink = screen.getByText('📐 Planner');

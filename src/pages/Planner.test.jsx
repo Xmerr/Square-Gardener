@@ -10,6 +10,7 @@ import * as plantingSchedule from '../utils/plantingSchedule';
 vi.mock('../utils/storage', () => ({
   getGardenBeds: vi.fn(),
   updateBedGrid: vi.fn(),
+  addGardenPlant: vi.fn(),
   saveBeds: vi.fn(),
   getPlants: vi.fn(),
   savePlants: vi.fn()
@@ -74,6 +75,15 @@ vi.mock('../components/PlantingTimeline', () => ({
     <div>
       <h3>Planting Schedule</h3>
       <div>{schedule?.length || 0} plants</div>
+    </div>
+  )
+}));
+
+vi.mock('../components/PlantPalette', () => ({
+  default: ({ plantIds }) => (
+    <div>
+      <h3>Plant Palette</h3>
+      <div>{plantIds?.length || 0} plants available</div>
     </div>
   )
 }));
@@ -1244,6 +1254,7 @@ describe('Planner', () => {
 
     it('calls updateBedGrid when Apply Plan is clicked', () => {
       storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
 
       renderPlanner();
 
@@ -1260,6 +1271,7 @@ describe('Planner', () => {
 
     it('shows success message after applying plan', async () => {
       storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
 
       renderPlanner();
 
@@ -1272,7 +1284,8 @@ describe('Planner', () => {
       fireEvent.click(applyButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Plan saved to Main Garden/)).toBeInTheDocument();
+        expect(screen.getByText(/Plan applied!/)).toBeInTheDocument();
+        expect(screen.getByText(/Created 4 plants in Main Garden/)).toBeInTheDocument();
       });
     });
 
@@ -1284,13 +1297,62 @@ describe('Planner', () => {
       const generateButton = screen.getByText('Generate Plan');
       fireEvent.click(generateButton);
 
-      expect(screen.queryByText(/Plan saved to/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Plan applied!/)).not.toBeInTheDocument();
     });
 
-    // Note: Timer test skipped due to issues with fake timers in test environment
-    it.skip('hides success message after timeout', async () => {
-      vi.useFakeTimers();
+    it('creates plant records for each occupied square when applying plan', () => {
       storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      // Should call addGardenPlant for each non-null square in the grid
+      // mockArrangement.grid has 4 plants: 2 tomato, 2 basil
+      expect(storage.addGardenPlant).toHaveBeenCalledTimes(4);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 1);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('basil', 'bed-1', 1);
+    });
+
+    it('does not create plants if updateBedGrid fails', () => {
+      storage.updateBedGrid.mockReturnValue(null);
+      storage.addGardenPlant.mockClear();
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      // Should not call addGardenPlant if updateBedGrid failed
+      expect(storage.addGardenPlant).not.toHaveBeenCalled();
+    });
+
+    it('displays correct plant count in success message (singular)', async () => {
+      const singlePlantArrangement = {
+        grid: [
+          ['tomato', null],
+          [null, null]
+        ],
+        placements: [{ plantId: 'tomato', row: 0, col: 0 }],
+        success: true,
+        unplacedPlants: []
+      };
+
+      planningAlgorithm.generateArrangement.mockReturnValue(singlePlantArrangement);
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 2, height: 2, grid: singlePlantArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
 
       renderPlanner();
 
@@ -1303,14 +1365,117 @@ describe('Planner', () => {
       fireEvent.click(applyButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Plan saved to Main Garden/)).toBeInTheDocument();
+        expect(screen.getByText(/Created 1 plant in Main Garden/)).toBeInTheDocument();
+      });
+    });
+
+    it('displays correct plant count in success message (plural)', async () => {
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Created 4 plants in Main Garden/)).toBeInTheDocument();
+      });
+    });
+
+    it('skips null squares when creating plants', () => {
+      const sparseGrid = {
+        grid: [
+          ['tomato', null, null],
+          [null, 'basil', null],
+          [null, null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'basil', row: 1, col: 1 }
+        ],
+        success: true,
+        unplacedPlants: []
+      };
+
+      planningAlgorithm.generateArrangement.mockReturnValue(sparseGrid);
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 3, height: 3, grid: sparseGrid.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      // Should only create 2 plants (tomato and basil), not 9
+      expect(storage.addGardenPlant).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not crash when applying empty grid', () => {
+      const emptyGrid = {
+        grid: [
+          [null, null],
+          [null, null]
+        ],
+        placements: [],
+        success: true,
+        unplacedPlants: []
+      };
+
+      planningAlgorithm.generateArrangement.mockReturnValue(emptyGrid);
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 2, height: 2, grid: emptyGrid.grid });
+      storage.addGardenPlant.mockClear();
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      // Should not crash, should not create any plants
+      expect(storage.addGardenPlant).not.toHaveBeenCalled();
+      expect(screen.getByText(/Created 0 plants in Main Garden/)).toBeInTheDocument();
+    });
+
+    // Note: Timer test skipped due to issues with fake timers in test environment
+    it.skip('hides success message after timeout', async () => {
+      vi.useFakeTimers();
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Plan applied!/)).toBeInTheDocument();
       });
 
       // Advance timers past the timeout
       vi.runAllTimers();
 
       // Message should be hidden now
-      expect(screen.queryByText(/Plan saved to/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Plan applied!/)).not.toBeInTheDocument();
 
       vi.useRealTimers();
     });
@@ -1336,6 +1501,61 @@ describe('Planner', () => {
 
       const select = screen.getByRole('combobox');
       expect(select.value).toBe('bed-1');
+    });
+  });
+
+  describe('PlantPalette integration', () => {
+    it('should not show plant palette when no plants selected', () => {
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Select None');
+      fireEvent.click(mockAddButton);
+
+      expect(screen.queryByText('Plant Palette')).not.toBeInTheDocument();
+    });
+
+    it('should show plant palette after generating plan', () => {
+      renderPlanner();
+
+      const mockSelectButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockSelectButton);
+
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      expect(screen.getByText('Plant Palette')).toBeInTheDocument();
+      expect(screen.getByText('1 plants available')).toBeInTheDocument();
+    });
+
+    it('should pass selected plant IDs to palette', () => {
+      renderPlanner();
+
+      const mockSelectButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(mockSelectButton);
+
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      expect(screen.getByText('Plant Palette')).toBeInTheDocument();
+      expect(screen.getByText('1 plants available')).toBeInTheDocument();
+    });
+
+    it('should hide palette when arrangement is cleared', () => {
+      renderPlanner();
+
+      const mockSelectButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockSelectButton);
+
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      expect(screen.getByText('Plant Palette')).toBeInTheDocument();
+
+      // Change bed to clear arrangement
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      expect(screen.queryByText('Plant Palette')).not.toBeInTheDocument();
     });
   });
 });

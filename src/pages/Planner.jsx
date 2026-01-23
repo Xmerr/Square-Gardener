@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import FrostDateForm from '../components/FrostDateForm';
 import PlantSelector from '../components/PlantSelector';
 import PlanningGrid from '../components/PlanningGrid';
 import PlantingTimeline from '../components/PlantingTimeline';
-import { getGardenBeds, updateBedGrid } from '../utils/storage';
+import PlantPalette from '../components/PlantPalette';
+import { getGardenBeds, updateBedGrid, addGardenPlant } from '../utils/storage';
 import { getFrostDates } from '../utils/frostDateStorage';
 import { generateArrangement, generateArrangementWithFill } from '../utils/planningAlgorithm';
 import { generatePlantingSchedule } from '../utils/plantingSchedule';
@@ -31,6 +32,7 @@ function Planner() {
   const [lockedSquares, setLockedSquares] = useState(null);
   const [fillMode, setFillMode] = useState(false);
   const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [plantsCreatedCount, setPlantsCreatedCount] = useState(0);
   const processedUrlParam = useRef(false);
 
   // Handle URL parameter changes (only runs once on mount if URL param present)
@@ -183,12 +185,32 @@ function Planner() {
   const handleApplyPlan = () => {
     if (!arrangement || !selectedBed) return;
 
+    // First, save the grid layout
     const result = updateBedGrid(selectedBed.id, arrangement.grid);
-    if (result) {
-      setAppliedSuccess(true);
-      setTimeout(() => setAppliedSuccess(false), 3000);
+    if (!result) return;
+
+    // Then, create plant records for each occupied square
+    let plantsCreated = 0;
+    const grid = arrangement.grid;
+    for (let row = 0; row < grid.length; row++) {
+      for (let col = 0; col < grid[row].length; col++) {
+        const plantId = grid[row][col];
+        if (plantId) {
+          addGardenPlant(plantId, selectedBed.id, 1);
+          plantsCreated++;
+        }
+      }
     }
+
+    setPlantsCreatedCount(plantsCreated);
+    setAppliedSuccess(true);
+    setTimeout(() => setAppliedSuccess(false), 3000);
   };
+
+  // Get unique plant IDs for the palette
+  const palettePlantIds = useMemo(() => {
+    return selectedPlants.map(p => p.plantId);
+  }, [selectedPlants]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -320,20 +342,30 @@ function Planner() {
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                           <p className="text-sm text-green-700 font-medium">
-                            Plan saved to {selectedBed.name}! You can now see it on the bed card in My Garden.
+                            Plan applied! Created {plantsCreatedCount} plant{plantsCreatedCount !== 1 ? 's' : ''} in {selectedBed.name}. View them in My Garden.
                           </p>
                         </div>
                       </div>
                     )}
-                    <PlanningGrid
-                      arrangement={arrangement}
-                      bed={selectedBed}
-                      onSquareClick={null}
-                      lockedSquares={lockedSquares}
-                      onArrangementChange={handleArrangementChange}
-                      onSquareDelete={handleSquareDelete}
-                      editable={true}
-                    />
+
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      <div className="flex-1">
+                        <PlanningGrid
+                          arrangement={arrangement}
+                          bed={selectedBed}
+                          onSquareClick={null}
+                          lockedSquares={lockedSquares}
+                          onArrangementChange={handleArrangementChange}
+                          onSquareDelete={handleSquareDelete}
+                          editable={true}
+                        />
+                      </div>
+                      {palettePlantIds.length > 0 && (
+                        <div className="lg:w-64">
+                          <PlantPalette plantIds={palettePlantIds} />
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
 
