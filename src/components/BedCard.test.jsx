@@ -1074,4 +1074,259 @@ describe('BedCard', () => {
       expect(screen.getByText('Aloe (1)')).toBeInTheDocument();
     });
   });
+
+  describe('Grid preview functionality', () => {
+    const mockOnEdit = vi.fn();
+    const mockOnDelete = vi.fn();
+
+    const mockCapacity = {
+      total: 9,
+      used: 4,
+      available: 5,
+      isOvercapacity: false
+    };
+
+    beforeEach(() => {
+      mockOnEdit.mockClear();
+      mockOnDelete.mockClear();
+    });
+
+    it('renders grid preview when bed has a saved grid', () => {
+      const bedWithGrid = {
+        id: 'bed-1',
+        name: 'Main Garden',
+        width: 3,
+        height: 3,
+        is_pot: false,
+        grid: [
+          ['tomato', 'lettuce', null],
+          ['lettuce', null, 'tomato'],
+          [null, 'tomato', 'lettuce']
+        ]
+      };
+
+      renderWithRouter(
+        <BedCard
+          bed={bedWithGrid}
+          capacity={mockCapacity}
+          plantCount={5}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.getByText('Saved Plan')).toBeInTheDocument();
+      expect(screen.getByText('Edit in Planner →')).toBeInTheDocument();
+    });
+
+    it('does not render grid preview for pots even with grid', () => {
+      const potWithGrid = {
+        id: 'pot-1',
+        name: 'My Pot',
+        size: 'medium',
+        is_pot: true,
+        grid: [['tomato']]
+      };
+
+      renderWithRouter(
+        <BedCard
+          bed={potWithGrid}
+          capacity={mockCapacity}
+          plantCount={1}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.queryByText('Saved Plan')).not.toBeInTheDocument();
+    });
+
+    it('does not render grid preview when bed has no grid', () => {
+      const bedWithoutGrid = {
+        id: 'bed-1',
+        name: 'Main Garden',
+        width: 3,
+        height: 3,
+        is_pot: false
+      };
+
+      renderWithRouter(
+        <BedCard
+          bed={bedWithoutGrid}
+          capacity={mockCapacity}
+          plantCount={0}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      expect(screen.queryByText('Saved Plan')).not.toBeInTheDocument();
+    });
+
+    it('renders plant cells with correct colors', () => {
+      const bedWithGrid = {
+        id: 'bed-1',
+        name: 'Main Garden',
+        width: 2,
+        height: 2,
+        is_pot: false,
+        grid: [
+          ['tomato', 'lettuce'],
+          ['carrot', 'basil']
+        ]
+      };
+
+      const { container } = renderWithRouter(
+        <BedCard
+          bed={bedWithGrid}
+          capacity={mockCapacity}
+          plantCount={4}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Check that colored cells exist
+      const gridCells = container.querySelectorAll('[style*="background-color"]');
+      expect(gridCells.length).toBeGreaterThan(0);
+    });
+
+    it('renders empty cells for null grid values', () => {
+      const bedWithGrid = {
+        id: 'bed-1',
+        name: 'Main Garden',
+        width: 2,
+        height: 2,
+        is_pot: false,
+        grid: [
+          ['tomato', null],
+          [null, 'lettuce']
+        ]
+      };
+
+      const { container } = renderWithRouter(
+        <BedCard
+          bed={bedWithGrid}
+          capacity={mockCapacity}
+          plantCount={2}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Check empty cells (gray background color #f5f5f4 = rgb(245, 245, 244))
+      const emptyCells = container.querySelectorAll('[style*="rgb(245, 245, 244)"]');
+      expect(emptyCells.length).toBe(2);
+    });
+
+    it('uses smaller cell size for large grids', () => {
+      const largeGrid = {
+        id: 'bed-1',
+        name: 'Large Garden',
+        width: 8,
+        height: 8,
+        is_pot: false,
+        grid: Array(8).fill(Array(8).fill('tomato'))
+      };
+
+      const { container } = renderWithRouter(
+        <BedCard
+          bed={largeGrid}
+          capacity={{ total: 64, used: 64, available: 0, isOvercapacity: false }}
+          plantCount={64}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Large grids (>6 in either dimension) use w-3 h-3 cells
+      const smallCells = container.querySelectorAll('.w-3.h-3');
+      expect(smallCells.length).toBeGreaterThan(0);
+    });
+
+    it('uses normal cell size for small grids', () => {
+      const smallGrid = {
+        id: 'bed-1',
+        name: 'Small Garden',
+        width: 4,
+        height: 4,
+        is_pot: false,
+        grid: Array(4).fill(Array(4).fill('tomato'))
+      };
+
+      const { container } = renderWithRouter(
+        <BedCard
+          bed={smallGrid}
+          capacity={{ total: 16, used: 16, available: 0, isOvercapacity: false }}
+          plantCount={16}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Small grids (<=6 in both dimensions) use w-4 h-4 cells
+      const normalCells = container.querySelectorAll('.w-4.h-4');
+      expect(normalCells.length).toBeGreaterThan(0);
+    });
+
+    it('applies fallback color for unknown plant IDs', () => {
+      const bedWithGrid = {
+        id: 'bed-1',
+        name: 'Test Garden',
+        width: 2,
+        height: 1,
+        is_pot: false,
+        grid: [
+          ['unknown-plant', 'another-unknown']
+        ]
+      };
+
+      const { container } = renderWithRouter(
+        <BedCard
+          bed={bedWithGrid}
+          capacity={mockCapacity}
+          plantCount={2}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      // Unknown plants get gray fallback color #9ca3af
+      const cellsWithFallback = container.querySelectorAll('[style*="rgb(156, 163, 175)"]');
+      expect(cellsWithFallback.length).toBe(2);
+    });
+
+    it('Edit in Planner link navigates to correct URL', () => {
+      const bedWithGrid = {
+        id: 'bed-123',
+        name: 'Main Garden',
+        width: 3,
+        height: 3,
+        is_pot: false,
+        grid: [['tomato', null, null], [null, null, null], [null, null, null]]
+      };
+
+      renderWithRouter(
+        <BedCard
+          bed={bedWithGrid}
+          capacity={mockCapacity}
+          plantCount={1}
+          plants={[]}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+        />
+      );
+
+      const editLink = screen.getByText('Edit in Planner →');
+      expect(editLink).toHaveAttribute('href', '/planner?bed=bed-123');
+    });
+  });
 });

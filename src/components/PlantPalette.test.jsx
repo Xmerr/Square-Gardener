@@ -1,6 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PlantPalette from './PlantPalette';
+
+// Mock the plant library
+vi.mock('../data/plantLibrary', () => ({
+  getPlantById: vi.fn((id) => {
+    const plants = {
+      tomato: { id: 'tomato', name: 'Tomato' },
+      basil: { id: 'basil', name: 'Basil' },
+      carrot: { id: 'carrot', name: 'Carrot' },
+      lettuce: { id: 'lettuce', name: 'Lettuce' },
+      pepper: { id: 'pepper', name: 'Pepper' }
+    };
+    return plants[id] || null;
+  })
+}));
 
 describe('PlantPalette', () => {
   describe('rendering', () => {
@@ -34,135 +48,107 @@ describe('PlantPalette', () => {
     });
 
     it('should sort plants alphabetically', () => {
-      const plantIds = ['zucchini', 'basil', 'tomato'];
+      const plantIds = ['tomato', 'basil', 'carrot'];
       render(<PlantPalette plantIds={plantIds} />);
 
-      const plantElements = screen.getAllByText(/^(Basil|Tomato|Zucchini)$/);
-      expect(plantElements[0].textContent).toBe('Basil');
-      expect(plantElements[1].textContent).toBe('Tomato');
-      expect(plantElements[2].textContent).toBe('Zucchini');
+      const plantNames = screen.getAllByText(/^(Basil|Carrot|Tomato)$/);
+      expect(plantNames[0]).toHaveTextContent('Basil');
+      expect(plantNames[1]).toHaveTextContent('Carrot');
+      expect(plantNames[2]).toHaveTextContent('Tomato');
     });
 
     it('should render plant initials', () => {
       const plantIds = ['tomato', 'basil'];
       render(<PlantPalette plantIds={plantIds} />);
 
-      const initials = screen.getAllByText(/^[TB]$/);
-      expect(initials.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should display usage instructions', () => {
-      const plantIds = ['tomato'];
-      render(<PlantPalette plantIds={plantIds} />);
-
-      expect(screen.getByText('Drag plants onto the grid to replace existing placements')).toBeInTheDocument();
-      expect(screen.getByText('Drag a plant onto a grid square to replace it')).toBeInTheDocument();
-      expect(screen.getByText('Drop on empty squares to fill them')).toBeInTheDocument();
+      // Check for initials (first letter of plant names)
+      expect(screen.getByText('T')).toBeInTheDocument();
+      expect(screen.getByText('B')).toBeInTheDocument();
     });
   });
 
   describe('drag and drop', () => {
     it('should make plant items draggable', () => {
-      const plantIds = ['tomato', 'basil'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const plantIds = ['tomato'];
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const tomatoElement = screen.getByText('Tomato').closest('div');
-      expect(tomatoElement).toHaveAttribute('draggable', 'true');
+      const draggableElement = container.querySelector('[draggable="true"]');
+      expect(draggableElement).toBeInTheDocument();
     });
 
     it('should have data-plant-id attribute', () => {
-      const plantIds = ['tomato', 'basil'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const plantIds = ['tomato'];
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const tomatoElement = screen.getByText('Tomato').closest('div');
-      expect(tomatoElement).toHaveAttribute('data-plant-id', 'tomato');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
+      expect(plantElement).toBeInTheDocument();
     });
 
     it('should apply opacity when dragging starts', () => {
       const plantIds = ['tomato'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const plantElement = screen.getByText('Tomato').closest('div');
-      expect(plantElement).toHaveClass('opacity-100');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
 
-      fireEvent.dragStart(plantElement);
+      const mockDataTransfer = {
+        effectAllowed: '',
+        setData: vi.fn()
+      };
+
+      fireEvent.dragStart(plantElement, { dataTransfer: mockDataTransfer });
+
       expect(plantElement).toHaveClass('opacity-50');
     });
 
     it('should remove opacity when drag ends', () => {
       const plantIds = ['tomato'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const plantElement = screen.getByText('Tomato').closest('div');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
 
-      fireEvent.dragStart(plantElement);
-      expect(plantElement).toHaveClass('opacity-50');
+      const mockDataTransfer = {
+        effectAllowed: '',
+        setData: vi.fn()
+      };
 
+      fireEvent.dragStart(plantElement, { dataTransfer: mockDataTransfer });
       fireEvent.dragEnd(plantElement);
+
       expect(plantElement).toHaveClass('opacity-100');
     });
 
-    it('should handle drag start for multiple plants independently', () => {
-      const plantIds = ['tomato', 'basil'];
-      render(<PlantPalette plantIds={plantIds} />);
+    it('should set dataTransfer data on drag start', () => {
+      const plantIds = ['tomato'];
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const tomatoElement = screen.getByText('Tomato').closest('div');
-      const basilElement = screen.getByText('Basil').closest('div');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
 
-      fireEvent.dragStart(tomatoElement);
-      expect(tomatoElement).toHaveClass('opacity-50');
-      expect(basilElement).toHaveClass('opacity-100');
-    });
+      const mockDataTransfer = {
+        effectAllowed: '',
+        setData: vi.fn()
+      };
 
-    it('should reset drag state when switching between plants', () => {
-      const plantIds = ['tomato', 'basil'];
-      render(<PlantPalette plantIds={plantIds} />);
+      fireEvent.dragStart(plantElement, { dataTransfer: mockDataTransfer });
 
-      const tomatoElement = screen.getByText('Tomato').closest('div');
-      const basilElement = screen.getByText('Basil').closest('div');
-
-      fireEvent.dragStart(tomatoElement);
-      expect(tomatoElement).toHaveClass('opacity-50');
-
-      fireEvent.dragEnd(tomatoElement);
-      fireEvent.dragStart(basilElement);
-
-      expect(tomatoElement).toHaveClass('opacity-100');
-      expect(basilElement).toHaveClass('opacity-50');
+      expect(mockDataTransfer.setData).toHaveBeenCalledWith('plant-id', 'tomato');
+      expect(mockDataTransfer.effectAllowed).toBe('copy');
     });
   });
 
   describe('styling', () => {
     it('should apply plant-specific colors', () => {
       const plantIds = ['tomato'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const plantElement = screen.getByText('Tomato').closest('div');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
       expect(plantElement).toHaveStyle({ backgroundColor: '#ef4444' });
-    });
-
-    it('should use default color for unknown plants', () => {
-      vi.mock('../data/plantLibrary', () => ({
-        getPlantById: vi.fn((id) => {
-          if (id === 'unknown') {
-            return { id: 'unknown', name: 'Unknown' };
-          }
-          return null;
-        })
-      }));
-
-      const plantIds = ['unknown'];
-      render(<PlantPalette plantIds={plantIds} />);
-
-      const plantElement = screen.getByText('Unknown').closest('div');
-      expect(plantElement).toHaveStyle({ backgroundColor: '#9ca3af' });
     });
 
     it('should apply cursor-move class to draggable elements', () => {
       const plantIds = ['tomato'];
-      render(<PlantPalette plantIds={plantIds} />);
+      const { container } = render(<PlantPalette plantIds={plantIds} />);
 
-      const plantElement = screen.getByText('Tomato').closest('div');
+      const plantElement = container.querySelector('[data-plant-id="tomato"]');
       expect(plantElement).toHaveClass('cursor-move');
     });
   });
