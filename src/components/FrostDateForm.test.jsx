@@ -615,6 +615,90 @@ describe('FrostDateForm', () => {
     });
   });
 
+  describe('Enter key behavior in ZIP code field', () => {
+    it('should trigger lookup when Enter is pressed in ZIP code field', () => {
+      frostDateLookup.lookupFrostDates.mockReturnValue({
+        lastSpringFrost: '04-15',
+        firstFallFrost: '10-15'
+      });
+      frostDateLookup.isZipCodeSupported.mockReturnValue(true);
+
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '10001' } });
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(screen.getByText('Frost dates found for your area!')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('April')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('October')).toBeInTheDocument();
+    });
+
+    it('should not trigger lookup when Enter is pressed with validation error', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: 'invalid' } });
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(frostDateLookup.lookupFrostDates).not.toHaveBeenCalled();
+    });
+
+    it('should not submit form when Enter is pressed in ZIP code field', () => {
+      const onSave = vi.fn();
+      render(<FrostDateForm onSave={onSave} />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '10001' } });
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(onSave).not.toHaveBeenCalled();
+      expect(frostDateStorage.saveFrostDates).not.toHaveBeenCalled();
+    });
+
+    it('should show "Enter at least 3 digits" message when Enter is pressed with short ZIP', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '12' } });
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(screen.getByText('Enter at least 3 digits of your ZIP code')).toBeInTheDocument();
+    });
+
+    it('should show "Enter at least 3 digits" message when Enter is pressed with empty ZIP', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(screen.getByText('Enter at least 3 digits of your ZIP code')).toBeInTheDocument();
+    });
+
+    it('should handle other keys without triggering lookup', () => {
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '10001' } });
+      fireEvent.keyDown(zipInput, { key: 'a', code: 'KeyA' });
+
+      expect(frostDateLookup.lookupFrostDates).not.toHaveBeenCalled();
+    });
+
+    it('should show not found message when Enter triggers failed lookup', () => {
+      frostDateLookup.lookupFrostDates.mockReturnValue(null);
+      frostDateLookup.isZipCodeSupported.mockReturnValue(false);
+
+      render(<FrostDateForm />);
+
+      const zipInput = screen.getByLabelText('ZIP Code (optional)');
+      fireEvent.change(zipInput, { target: { value: '99999' } });
+      fireEvent.keyDown(zipInput, { key: 'Enter', code: 'Enter' });
+
+      expect(screen.getByText('ZIP code not found. Please enter dates manually.')).toBeInTheDocument();
+    });
+  });
+
   describe('ZIP code validation', () => {
     it('should show error when non-numeric characters are entered', () => {
       render(<FrostDateForm />);

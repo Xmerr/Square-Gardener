@@ -106,8 +106,8 @@ export const sortByConstraintDifficulty = (plantSelections) => {
     const plant = getPlantById(selection.plantId);
     if (!plant) continue;
 
-    // Calculate how many squares this plant needs
-    const squaresNeeded = Math.ceil(selection.quantity * plant.squaresPerPlant);
+    // quantity now represents square feet directly
+    const squaresNeeded = Math.ceil(selection.quantity);
     for (let i = 0; i < squaresNeeded; i++) {
       expanded.push(selection.plantId);
     }
@@ -315,5 +315,205 @@ export const getArrangementStats = (grid) => {
     emptySquares: totalSquares - filledSquares,
     companionAdjacencies,
     uniquePlants: plantSet.size
+  };
+};
+
+/**
+ * Check if a plant is a bridge between two enemy plants
+ * @param {string} bridgePlantId - Potential bridge plant
+ * @param {string} plantId1 - First plant
+ * @param {string} plantId2 - Second plant
+ * @returns {boolean} true if bridge plant is compatible with both enemies
+ */
+export const isBridgePlant = (bridgePlantId, plantId1, plantId2) => {
+  // Check if the two plants are enemies
+  if (arePlantsCompatible(plantId1, plantId2)) {
+    return false; // Not enemies, no bridge needed
+  }
+
+  // Check if bridge is compatible with both
+  return arePlantsCompatible(bridgePlantId, plantId1) &&
+         arePlantsCompatible(bridgePlantId, plantId2);
+};
+
+/**
+ * Find bridge plants that can connect two enemy plant groups
+ * @param {string} plantId1 - First plant
+ * @param {string} plantId2 - Second plant
+ * @param {Array<string>} availablePlantIds - Plant IDs available for placement
+ * @returns {Array<string>} Array of plant IDs that can bridge the two enemies
+ */
+export const findBridgePlants = (plantId1, plantId2, availablePlantIds) => {
+  return availablePlantIds.filter(bridgeId =>
+    isBridgePlant(bridgeId, plantId1, plantId2)
+  );
+};
+
+/**
+ * Generate arrangement with fill mode - uses quantities as minimums and fills remaining space
+ * @param {Object} options
+ * @param {number} options.width - Bed width in feet
+ * @param {number} options.height - Bed height in feet
+ * @param {Array<{plantId: string, quantity: number}>} options.plantSelections - Plants to arrange (minimums)
+ * @param {Array<Array<boolean>>} [options.lockedSquares] - Optional grid of locked squares
+ * @param {boolean} [options.fillMode=false] - If true, fill all available space
+ * @returns {{
+ *   grid: Array<Array<string|null>>,
+ *   placements: Array<{plantId: string, row: number, col: number}>,
+ *   success: boolean,
+ *   unplacedPlants: Array<string>
+ * }}
+ */
+export const generateArrangementWithFill = ({ width, height, plantSelections, lockedSquares, fillMode = false }) => {
+  // Validate inputs
+  if (!width || !height || width < 1 || height < 1) {
+    throw new Error('Invalid bed dimensions');
+  }
+  if (!plantSelections || !Array.isArray(plantSelections)) {
+    throw new Error('Plant selections must be an array');
+  }
+
+  // Initialize grid with nulls
+  const grid = Array.from({ length: height }, () => Array(width).fill(null));
+
+  // Initialize locked squares if not provided
+  const locked = lockedSquares || Array.from({ length: height }, () => Array(width).fill(false));
+
+  // Track placements
+  const placements = [];
+  const unplacedPlants = [];
+
+  // Calculate available squares
+  const availableSquares = grid.flat().filter((_, i) => {
+    const row = Math.floor(i / width);
+    const col = i % width;
+    return !locked[row][col];
+  }).length;
+
+  if (!fillMode) {
+    // Original behavior - exact quantities
+    const plantsToPlace = sortByConstraintDifficulty(plantSelections);
+
+    if (plantsToPlace.length > availableSquares) {
+      throw new Error(`Not enough space: ${plantsToPlace.length} plants require more than ${availableSquares} available squares`);
+    }
+
+    // Place each plant using greedy algorithm with scoring
+    for (const plantId of plantsToPlace) {
+      const position = findBestPosition(plantId, grid, locked);
+
+      if (!position) {
+        unplacedPlants.push(plantId);
+      } else {
+        grid[position.row][position.col] = plantId;
+        placements.push({ plantId, row: position.row, col: position.col });
+      }
+    }
+
+    // Check if any plants couldn't be placed due to constraints
+    if (unplacedPlants.length > 0) {
+      const uniqueUnplaced = [...new Set(unplacedPlants)];
+      const plantNames = uniqueUnplaced.map(id => getPlantById(id).name);
+      throw new Error(
+        `Could not place all plants due to companion/enemy constraints. ` +
+        `Unable to place: ${plantNames.join(', ')}. ` +
+        `Consider removing plants with many enemies or reducing quantities.`
+      );
+    }
+
+    return {
+      grid,
+      placements,
+      success: true,
+      unplacedPlants: []
+    };
+  }
+
+  // Fill mode - treat quantities as minimums
+
+  // Step 1: Place minimum quantities (sorted by constraint difficulty)
+  const plantsToPlace = sortByConstraintDifficulty(plantSelections);
+
+  if (plantsToPlace.length > availableSquares) {
+    throw new Error(`Not enough space: ${plantsToPlace.length} plants require more than ${availableSquares} available squares`);
+  }
+
+  for (const plantId of plantsToPlace) {
+    const position = findBestPosition(plantId, grid, locked);
+
+    if (!position) {
+      unplacedPlants.push(plantId);
+    } else {
+      grid[position.row][position.col] = plantId;
+      placements.push({ plantId, row: position.row, col: position.col });
+    }
+  }
+
+  if (unplacedPlants.length > 0) {
+    const uniqueUnplaced = [...new Set(unplacedPlants)];
+    const plantNames = uniqueUnplaced.map(id => getPlantById(id).name);
+    throw new Error(
+      `Could not place minimum plant quantities due to companion/enemy constraints. ` +
+      `Unable to place: ${plantNames.join(', ')}. ` +
+      `Consider removing plants with many enemies or reducing quantities.`
+    );
+  }
+
+  // Step 2: Calculate remaining space and proportional targets
+  const filledCount = placements.length;
+  const remainingSquares = availableSquares - filledCount;
+
+  if (remainingSquares > 0) {
+    // Get unique plant IDs from selections
+    const selectedPlantIds = [...new Set(plantSelections.map(s => s.plantId))];
+
+    // Calculate current counts per plant
+    const currentCounts = {};
+    selectedPlantIds.forEach(id => {
+      currentCounts[id] = placements.filter(p => p.plantId === id).length;
+    });
+
+    // Fill remaining squares proportionally
+    for (let i = 0; i < remainingSquares; i++) {
+      // Find plant with lowest current ratio (current / total)
+      let selectedPlantId = null;
+      let lowestRatio = Infinity;
+
+      for (const plantId of selectedPlantIds) {
+        const current = currentCounts[plantId] || 0;
+        const ratio = current / (filledCount + i + 1);
+
+        if (ratio < lowestRatio) {
+          // Try to find a valid position for this plant
+          const testPosition = findBestPosition(plantId, grid, locked);
+          if (testPosition) {
+            lowestRatio = ratio;
+            selectedPlantId = plantId;
+          }
+        }
+      }
+
+      if (selectedPlantId) {
+        const position = findBestPosition(selectedPlantId, grid, locked);
+        if (position) {
+          grid[position.row][position.col] = selectedPlantId;
+          placements.push({ plantId: selectedPlantId, row: position.row, col: position.col });
+          currentCounts[selectedPlantId] = (currentCounts[selectedPlantId] || 0) + 1;
+        } else {
+          // No valid position found, try bridge plant strategy
+          break;
+        }
+      } else {
+        // No plant could be placed, stop filling
+        break;
+      }
+    }
+  }
+
+  return {
+    grid,
+    placements,
+    success: true,
+    unplacedPlants: []
   };
 };

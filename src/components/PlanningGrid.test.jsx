@@ -581,7 +581,7 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid {...propsWithUnknown} />);
 
       // Trigger a drop to cause validation
-      const cell1 = screen.getByTitle('unknownplant1 (0, 0)');
+      const cell1 = screen.getByTitle(/unknownplant1 \(0, 0\)/);
       const emptyCell = screen.getByTitle('Empty (1, 0)');
 
       fireEvent.dragStart(cell1);
@@ -779,6 +779,119 @@ describe('PlanningGrid', () => {
       // Tooltip should show both companion and enemy info
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 1\)[\s\S]*Companions: Basil[\s\S]*Warning: near Cabbage/);
       expect(tomatoCell).toBeInTheDocument();
+    });
+  });
+
+  describe('square deletion', () => {
+    it('should call onSquareDelete on right click when editable', () => {
+      const mockDelete = vi.fn();
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)/);
+      fireEvent.contextMenu(tomatoCell);
+
+      expect(mockDelete).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('should call onSquareDelete on ctrl+click when editable', () => {
+      const mockDelete = vi.fn();
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)/);
+      fireEvent.click(tomatoCell, { ctrlKey: true });
+
+      expect(mockDelete).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('should not call onSquareDelete when not editable', () => {
+      const mockDelete = vi.fn();
+      const nonEditableProps = {
+        ...defaultProps,
+        editable: false,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...nonEditableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)/);
+      fireEvent.contextMenu(tomatoCell);
+
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it('should not delete empty cells', () => {
+      const mockDelete = vi.fn();
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+      fireEvent.contextMenu(emptyCell);
+
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it('should prevent default on right click', () => {
+      const mockDelete = vi.fn();
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)/);
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      tomatoCell.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should show delete instruction in tooltip when editable', () => {
+      const mockDelete = vi.fn();
+      const editableProps = {
+        ...defaultProps,
+        editable: true,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)[\s\S]*Right-click or Ctrl\+Click to delete/);
+      expect(tomatoCell).toBeInTheDocument();
+    });
+
+    it('should not show delete instruction when not editable', () => {
+      const mockDelete = vi.fn();
+      const nonEditableProps = {
+        ...defaultProps,
+        editable: false,
+        onSquareDelete: mockDelete
+      };
+
+      render(<PlanningGrid {...nonEditableProps} />);
+
+      const tomatoCell = screen.getByTitle(/Tomato \(0, 0\)/);
+      expect(tomatoCell.title).not.toContain('Right-click');
     });
   });
 });

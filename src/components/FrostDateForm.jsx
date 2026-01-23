@@ -108,6 +108,15 @@ function FrostDateForm({ onSave, initialFrostDates }) {
     }
   };
 
+  const handleZipKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!zipError) {
+        handleZipLookup();
+      }
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -174,6 +183,7 @@ function FrostDateForm({ onSave, initialFrostDates }) {
               type="text"
               value={zipCode}
               onChange={handleZipChange}
+              onKeyDown={handleZipKeyDown}
               placeholder="Enter ZIP code"
               maxLength={5}
               className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary ${

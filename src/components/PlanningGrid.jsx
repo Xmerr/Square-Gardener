@@ -49,7 +49,7 @@ const getContrastColor = (hexColor) => {
   return luminance > 0.5 ? '#1f2937' : '#ffffff';
 };
 
-function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrangementChange, editable = false }) {
+function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrangementChange, onSquareDelete, editable = false }) {
   const grid = useMemo(() => arrangement?.grid || [], [arrangement]);
   const width = bed?.width || 0;
   const height = bed?.height || 0;
@@ -82,9 +82,23 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [plantCounts]);
 
-  const handleSquareClick = (row, col, plantId) => {
+  const handleSquareClick = (e, row, col, plantId) => {
+    // Check if this is a delete action (right-click or ctrl+click)
+    if (editable && plantId && onSquareDelete && (e.ctrlKey || e.button === 2)) {
+      e.preventDefault();
+      onSquareDelete(row, col);
+      return;
+    }
+
     if (onSquareClick) {
       onSquareClick({ row, col, plantId });
+    }
+  };
+
+  const handleContextMenu = (e, row, col, plantId) => {
+    if (editable && plantId && onSquareDelete) {
+      e.preventDefault();
+      onSquareDelete(row, col);
     }
   };
 
@@ -205,7 +219,8 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                 return (
                   <button
                     key={`${rowIndex}-${colIndex}`}
-                    onClick={() => handleSquareClick(rowIndex, colIndex, plantId)}
+                    onClick={(e) => handleSquareClick(e, rowIndex, colIndex, plantId)}
+                    onContextMenu={(e) => handleContextMenu(e, rowIndex, colIndex, plantId)}
                     draggable={editable && plantId && !isLocked}
                     onDragStart={() => handleDragStart(rowIndex, colIndex, plantId)}
                     onDragEnd={handleDragEnd}
@@ -215,7 +230,7 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                       isLocked ? 'ring-2 ring-gray-400' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''} ${editable && plantId && !isLocked ? 'cursor-move' : ''}`}
                     style={{ backgroundColor: bgColor, color: textColor, boxShadow }}
-                    title={tooltip}
+                    title={tooltip + (editable && plantId && !isLocked ? '\nRight-click or Ctrl+Click to delete' : '')}
                   >
                     {displayInitial}
                     {isLocked && (
@@ -345,6 +360,7 @@ PlanningGrid.propTypes = {
   onSquareClick: PropTypes.func,
   lockedSquares: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.bool)),
   onArrangementChange: PropTypes.func,
+  onSquareDelete: PropTypes.func,
   editable: PropTypes.bool
 };
 
