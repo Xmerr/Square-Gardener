@@ -1,6 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import BedManager from './BedManager';
+
+// Helper to render BedManager wrapped in MemoryRouter
+const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 import * as storage from '../utils/storage';
 
 vi.mock('../utils/storage', () => ({
@@ -47,14 +51,14 @@ describe('BedManager', () => {
 
   describe('empty state', () => {
     it('shows empty state when no beds exist', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('No Garden Beds Yet')).toBeInTheDocument();
       expect(screen.getByText('Create Your First Bed')).toBeInTheDocument();
     });
 
     it('shows add new bed button', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('Add New Bed')).toBeInTheDocument();
     });
@@ -86,28 +90,28 @@ describe('BedManager', () => {
         return { total: 8, used: 10, available: -2, isOvercapacity: true };
       });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('Main Garden')).toBeInTheDocument();
       expect(screen.getByText('0 / 0 sq ft')).toBeInTheDocument();
     });
 
     it('displays all beds', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('Main Garden')).toBeInTheDocument();
       expect(screen.getByText('Herb Garden')).toBeInTheDocument();
     });
 
     it('displays capacity for each bed', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('8 / 16 sq ft')).toBeInTheDocument();
       expect(screen.getByText('10 / 8 sq ft')).toBeInTheDocument();
     });
 
     it('displays plant counts', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByText('2 plants')).toBeInTheDocument();
       expect(screen.getByText('1 plant')).toBeInTheDocument();
@@ -116,7 +120,7 @@ describe('BedManager', () => {
 
   describe('creating beds', () => {
     it('shows form when add new bed clicked', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
 
@@ -125,7 +129,7 @@ describe('BedManager', () => {
     });
 
     it('shows form when create first bed clicked', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Create Your First Bed'));
 
@@ -133,7 +137,7 @@ describe('BedManager', () => {
     });
 
     it('hides add button when form is shown', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
 
@@ -143,7 +147,7 @@ describe('BedManager', () => {
     it('creates bed and refreshes list', () => {
       storage.addGardenBed.mockReturnValue({ id: 'bed-new', name: 'New Bed', width: 4, height: 4 });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
       fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'New Bed' } });
@@ -158,7 +162,7 @@ describe('BedManager', () => {
     it('creates pot with size and refreshes list', () => {
       storage.addGardenBed.mockReturnValue({ id: 'pot-new', name: 'New Pot', is_pot: true, size: 'large' });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
       fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'New Pot' } });
@@ -171,7 +175,7 @@ describe('BedManager', () => {
     });
 
     it('hides form when cancelled', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
       fireEvent.click(screen.getByText('Cancel'));
@@ -190,7 +194,7 @@ describe('BedManager', () => {
     });
 
     it('shows edit form when edit clicked', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Edit Main Garden'));
 
@@ -199,7 +203,7 @@ describe('BedManager', () => {
     });
 
     it('hides add button when editing', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Edit Main Garden'));
 
@@ -209,7 +213,7 @@ describe('BedManager', () => {
     it('updates bed and refreshes list', () => {
       storage.updateGardenBed.mockReturnValue({ id: 'bed-1', name: 'Updated', width: 6, height: 4, is_pot: false });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Edit Main Garden'));
       fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Updated' } });
@@ -226,7 +230,7 @@ describe('BedManager', () => {
     });
 
     it('hides edit form when cancelled', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Edit Main Garden'));
       fireEvent.click(screen.getByText('Cancel'));
@@ -249,7 +253,7 @@ describe('BedManager', () => {
       storage.getPlantsByBed.mockReturnValue([]);
       storage.removeGardenBed.mockReturnValue(true);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
 
@@ -264,7 +268,7 @@ describe('BedManager', () => {
         return [];
       });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
 
@@ -282,7 +286,7 @@ describe('BedManager', () => {
       });
       storage.removeGardenBed.mockReturnValue(true);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       fireEvent.click(screen.getByLabelText(/Delete all plants/));
@@ -299,7 +303,7 @@ describe('BedManager', () => {
         return [];
       });
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       // Check the dialog is open by looking for the modal heading
@@ -318,7 +322,7 @@ describe('BedManager', () => {
       });
       storage.removeGardenBed.mockReturnValue(false);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       fireEvent.click(screen.getByLabelText(/Delete all plants/));
@@ -330,7 +334,7 @@ describe('BedManager', () => {
     it('shows error when cannot delete last bed with plants', () => {
       storage.removeGardenBed.mockReturnValue(false);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
 
@@ -340,7 +344,7 @@ describe('BedManager', () => {
     it('clears error when adding new bed', () => {
       storage.removeGardenBed.mockReturnValue(false);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       expect(screen.getByText(/Cannot delete the last bed/)).toBeInTheDocument();
@@ -352,7 +356,7 @@ describe('BedManager', () => {
     it('clears error when editing bed', () => {
       storage.removeGardenBed.mockReturnValue(false);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       expect(screen.getByText(/Cannot delete the last bed/)).toBeInTheDocument();
@@ -364,7 +368,7 @@ describe('BedManager', () => {
     it('clears error when cancelling form', () => {
       storage.removeGardenBed.mockReturnValue(false);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Delete Main Garden'));
       fireEvent.click(screen.getByText('Add New Bed'));
@@ -378,7 +382,7 @@ describe('BedManager', () => {
     it('handles missing onBedChange on create', () => {
       storage.addGardenBed.mockReturnValue({ id: 'bed-new', name: 'Test', width: 4, height: 4 });
 
-      render(<BedManager />);
+      renderWithRouter(<BedManager />);
 
       fireEvent.click(screen.getByText('Add New Bed'));
       fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Test' } });
@@ -394,7 +398,7 @@ describe('BedManager', () => {
       storage.getGardenBeds.mockReturnValue(mockBeds);
       storage.updateGardenBed.mockReturnValue({ id: 'bed-1', name: 'Updated', width: 4, height: 4 });
 
-      render(<BedManager />);
+      renderWithRouter(<BedManager />);
 
       fireEvent.click(screen.getByLabelText('Edit Test Bed'));
       fireEvent.change(screen.getByLabelText('Bed Name'), { target: { value: 'Updated' } });
@@ -411,7 +415,7 @@ describe('BedManager', () => {
       storage.getGardenBeds.mockReturnValue(mockBeds);
       storage.removeGardenBed.mockReturnValue(true);
 
-      render(<BedManager />);
+      renderWithRouter(<BedManager />);
 
       fireEvent.click(screen.getByLabelText('Delete Bed 1'));
 
@@ -438,7 +442,7 @@ describe('BedManager', () => {
     });
 
     it('renders beds with drag handles', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByLabelText('Drag First Bed')).toBeInTheDocument();
       expect(screen.getByLabelText('Drag Second Bed')).toBeInTheDocument();
@@ -446,7 +450,7 @@ describe('BedManager', () => {
     });
 
     it('reorders beds on drag and drop', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -466,7 +470,7 @@ describe('BedManager', () => {
     });
 
     it('does not reorder when dropping on same bed', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -480,7 +484,7 @@ describe('BedManager', () => {
     });
 
     it('clears dragging state on drag end', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -493,7 +497,7 @@ describe('BedManager', () => {
     });
 
     it('applies opacity to dragged bed', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -503,7 +507,7 @@ describe('BedManager', () => {
     });
 
     it('handles invalid drag operations gracefully', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -516,7 +520,7 @@ describe('BedManager', () => {
     });
 
     it('handles drag start when dataTransfer is null', () => {
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -531,7 +535,7 @@ describe('BedManager', () => {
 
     it('handles drop when dragged bed is not found in array', () => {
       // Render with initial beds
-      const { container } = render(<BedManager onBedChange={mockOnBedChange} />);
+      const { container } = renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       const bedCards = container.querySelectorAll('[draggable="true"]');
       const firstBed = bedCards[0];
@@ -585,7 +589,7 @@ describe('BedManager', () => {
     });
 
     it('shows move up button for all beds except first', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Move Second Bed up')).toBeInTheDocument();
@@ -593,7 +597,7 @@ describe('BedManager', () => {
     });
 
     it('shows move down button for all beds except last', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.getByLabelText('Move First Bed down')).toBeInTheDocument();
       expect(screen.getByLabelText('Move Second Bed down')).toBeInTheDocument();
@@ -601,7 +605,7 @@ describe('BedManager', () => {
     });
 
     it('moves bed up when move up button clicked', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Move Second Bed up'));
 
@@ -610,7 +614,7 @@ describe('BedManager', () => {
     });
 
     it('moves bed down when move down button clicked', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       fireEvent.click(screen.getByLabelText('Move Second Bed down'));
 
@@ -619,21 +623,21 @@ describe('BedManager', () => {
     });
 
     it('does not move first bed up', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       // First bed should not have move up button
       expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
     });
 
     it('does not move last bed down', () => {
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       // Last bed should not have move down button
       expect(screen.queryByLabelText('Move Third Bed down')).not.toBeInTheDocument();
     });
 
     it('handles missing onBedChange on reorder', () => {
-      render(<BedManager />);
+      renderWithRouter(<BedManager />);
 
       fireEvent.click(screen.getByLabelText('Move Second Bed up'));
 
@@ -647,7 +651,7 @@ describe('BedManager', () => {
       ];
       storage.getGardenBeds.mockReturnValue(twoBeds);
 
-      render(<BedManager onBedChange={mockOnBedChange} />);
+      renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
       expect(screen.queryByLabelText('Move First Bed up')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Move First Bed down')).toBeInTheDocument();
