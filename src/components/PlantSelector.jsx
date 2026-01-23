@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { plantLibrary, getPlantById } from '../data/plantLibrary';
-import { getCurrentSeason } from '../utils/dateFormatting';
 
 function PlantSelector({ availableSpace, onSelectionChange, initialSelections, fillMode = false }) {
   const [selections, setSelections] = useState(() => {
@@ -12,7 +11,7 @@ function PlantSelector({ availableSpace, onSelectionChange, initialSelections, f
   });
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [seasonFilter, setSeasonFilter] = useState(getCurrentSeason());
+  const [seasonFilter, setSeasonFilter] = useState('all');
 
   const filteredPlants = useMemo(() => {
     return plantLibrary.filter(plant => {

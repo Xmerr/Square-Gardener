@@ -52,3 +52,49 @@ export const getSquareCompanionStatus = (grid, row, col) => {
     enemies
   };
 };
+
+/**
+ * Get edge borders and corner markers for a square based on companion/enemy relationships
+ * @param {Array<Array<string|null>>} grid - The garden grid
+ * @param {number} row - Row index
+ * @param {number} col - Column index
+ * @returns {Object|null} Edge borders and corner statuses, or null for empty squares
+ */
+export const getSquareEdgeBorders = (grid, row, col) => {
+  const plantId = grid[row]?.[col];
+  if (!plantId) return null;
+
+  const plant = getPlantById(plantId);
+  if (!plant) return null;
+
+  const height = grid.length;
+  const width = grid[0].length;
+
+  // Check relationship with specific neighbor
+  const getRelationship = (neighborRow, neighborCol) => {
+    const neighborId = grid[neighborRow]?.[neighborCol];
+    if (!neighborId) return null;
+
+    const neighborPlant = getPlantById(neighborId);
+    if (!neighborPlant) return null;
+
+    const isCompanion = plant.companionPlants.includes(neighborId);
+    const isEnemy = plant.avoidPlants.includes(neighborId);
+
+    // Enemy takes precedence
+    if (isEnemy) return 'enemy';
+    if (isCompanion) return 'companion';
+    return null;
+  };
+
+  return {
+    top: row > 0 ? getRelationship(row - 1, col) : null,
+    right: col < width - 1 ? getRelationship(row, col + 1) : null,
+    bottom: row < height - 1 ? getRelationship(row + 1, col) : null,
+    left: col > 0 ? getRelationship(row, col - 1) : null,
+    topLeft: row > 0 && col > 0 ? getRelationship(row - 1, col - 1) : null,
+    topRight: row > 0 && col < width - 1 ? getRelationship(row - 1, col + 1) : null,
+    bottomLeft: row < height - 1 && col > 0 ? getRelationship(row + 1, col - 1) : null,
+    bottomRight: row < height - 1 && col < width - 1 ? getRelationship(row + 1, col + 1) : null,
+  };
+};

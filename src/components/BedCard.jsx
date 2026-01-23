@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
 import { POT_SIZES } from '../utils/storage';
 import { getPlantById } from '../data/plantLibrary';
 
@@ -74,6 +75,87 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete, onDragSt
     if (onDrop) {
       onDrop(e, bed);
     }
+  };
+
+  // Render miniature grid preview for beds with saved plans
+  const renderGridPreview = () => {
+    if (isPot || !bed.grid) return null;
+
+    const PLANT_COLORS = {
+      tomato: '#ef4444',
+      lettuce: '#22c55e',
+      carrot: '#f97316',
+      basil: '#16a34a',
+      pepper: '#dc2626',
+      cucumber: '#84cc16',
+      bean: '#65a30d',
+      spinach: '#15803d',
+      radish: '#f43f5e',
+      onion: '#a855f7',
+      broccoli: '#14532d',
+      cabbage: '#166534',
+      cauliflower: '#fef3c7',
+      zucchini: '#a3e635',
+      pea: '#4ade80',
+      potato: '#d4a574',
+      beet: '#9f1239',
+      kale: '#166534',
+      cilantro: '#22d3ee',
+      parsley: '#34d399',
+      strawberry: '#fb7185',
+      oregano: '#059669',
+      thyme: '#6ee7b7',
+      marigold: '#fbbf24',
+      'swiss-chard': '#10b981',
+      eggplant: '#7c3aed',
+      garlic: '#f5f5f4',
+      arugula: '#86efac',
+      corn: '#fde047',
+      sage: '#a78bfa'
+    };
+
+    const getPlantColor = (plantId) => {
+      return PLANT_COLORS[plantId] || '#9ca3af';
+    };
+
+    const cellSize = bed.width > 6 || bed.height > 6 ? 'w-3 h-3' : 'w-4 h-4';
+
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-medium text-gray-700">Saved Plan</h4>
+          <Link
+            to={`/planner?bed=${bed.id}`}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Edit in Planner →
+          </Link>
+        </div>
+        <div
+          className="inline-grid gap-0.5 p-1 bg-amber-50 rounded border border-amber-200"
+          style={{
+            gridTemplateColumns: `repeat(${bed.width}, minmax(0, 1fr))`
+          }}
+        >
+          {bed.grid.map((row, rowIndex) =>
+            row.map((plantId, colIndex) => {
+              const bgColor = plantId ? getPlantColor(plantId) : '#f5f5f4';
+              const plant = plantId ? getPlantById(plantId) : null;
+              const title = plant ? plant.name : 'Empty';
+
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className={`${cellSize} rounded-sm`}
+                  style={{ backgroundColor: bgColor }}
+                  title={title}
+                />
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -200,6 +282,22 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete, onDragSt
           </div>
         )}
       </div>
+
+      {!isPot && !bed.grid && (
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">No plan yet</p>
+            <Link
+              to={`/planner?bed=${bed.id}`}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Create in Planner →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {renderGridPreview()}
     </div>
   );
 }
@@ -212,6 +310,7 @@ BedCard.propTypes = {
     // For beds (is_pot = false or undefined)
     width: PropTypes.number,
     height: PropTypes.number,
+    grid: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)),
     // For pots (is_pot = true)
     size: PropTypes.string
   }).isRequired,

@@ -228,15 +228,51 @@ export const getBedById = (bedId) => {
 
 /**
  * Update a garden bed's properties
+ * Clears the grid if width or height changes
  */
 export const updateGardenBed = (bedId, updates) => {
   const beds = getGardenBeds();
   const index = beds.findIndex(bed => bed.id === bedId);
 
   if (index !== -1) {
+    const currentBed = beds[index];
+    const updatedBed = {
+      ...currentBed,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Clear grid if dimensions changed (only for beds, not pots)
+    if (!currentBed.is_pot) {
+      const widthChanged = updates.width !== undefined && updates.width !== currentBed.width;
+      const heightChanged = updates.height !== undefined && updates.height !== currentBed.height;
+      if (widthChanged || heightChanged) {
+        updatedBed.grid = null;
+      }
+    }
+
+    beds[index] = updatedBed;
+    saveGardenBeds(beds);
+    return beds[index];
+  }
+
+  return null;
+};
+
+/**
+ * Update a garden bed's grid arrangement
+ * @param {string} bedId - ID of the bed to update
+ * @param {Array<Array<string|null>>} grid - 2D array of plant IDs
+ * @returns {Object|null} - Updated bed or null if not found
+ */
+export const updateBedGrid = (bedId, grid) => {
+  const beds = getGardenBeds();
+  const index = beds.findIndex(bed => bed.id === bedId);
+
+  if (index !== -1) {
     beds[index] = {
       ...beds[index],
-      ...updates,
+      grid,
       updatedAt: new Date().toISOString()
     };
     saveGardenBeds(beds);

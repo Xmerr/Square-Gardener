@@ -619,8 +619,8 @@ describe('PlanningGrid', () => {
     });
   });
 
-  describe('companion visual tints', () => {
-    it('should apply green tint to square with companion nearby', () => {
+  describe('companion visual borders', () => {
+    it('should apply green border to square with companion to the right', () => {
       // Tomato and basil are companions
       const companionArrangement = {
         grid: [
@@ -636,15 +636,12 @@ describe('PlanningGrid', () => {
 
       render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
-      // Both tomato and basil should have green tint (box-shadow)
+      // Tomato should have green right border (basil is to the right)
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      const basilCell = screen.getByTitle(/^Basil \(0, 1\)/);
-
-      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' });
-      expect(basilCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(34, 197, 94, 0.25)' });
+      expect(tomatoCell).toHaveStyle({ borderRight: '3px solid rgb(34, 197, 94)' });
     });
 
-    it('should apply red tint to square with enemy nearby', () => {
+    it('should apply red border to square with enemy to the right', () => {
       // Tomato and cabbage are enemies
       const enemyArrangement = {
         grid: [
@@ -661,42 +658,66 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={enemyArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      const cabbageCell = screen.getByTitle(/^Cabbage \(0, 1\)/);
-
-      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
-      expect(cabbageCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
+      expect(tomatoCell).toHaveStyle({ borderRight: '3px solid rgb(239, 68, 68)' });
     });
 
-    it('should apply red tint when both companion and enemy are nearby (red takes precedence)', () => {
-      // Tomato with basil (companion) and cabbage (enemy)
-      const mixedArrangement = {
+    it('should apply green border to square with companion below', () => {
+      // Tomato with carrot below (companions)
+      const companionArrangement = {
         grid: [
-          ['basil', 'tomato', 'cabbage']
+          ['tomato', null],
+          ['carrot', null]
         ],
         placements: [
-          { plantId: 'basil', row: 0, col: 0 },
-          { plantId: 'tomato', row: 0, col: 1 },
-          { plantId: 'cabbage', row: 0, col: 2 }
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'carrot', row: 1, col: 0 }
         ],
         success: true
       };
-      const wideBed = { width: 3, height: 1, id: 'wide', name: 'Wide' };
 
-      render(<PlanningGrid arrangement={mixedArrangement} bed={wideBed} onSquareClick={vi.fn()} />);
+      render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
-      const tomatoCell = screen.getByTitle(/^Tomato \(0, 1\)/);
-      // Red tint should take precedence
-      expect(tomatoCell).toHaveStyle({ boxShadow: 'inset 0 0 0 100px rgba(239, 68, 68, 0.35)' });
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      expect(tomatoCell).toHaveStyle({ borderBottom: '3px solid rgb(34, 197, 94)' });
     });
 
-    it('should not apply tint to empty squares', () => {
+    it('should apply both borders when companions are on right and bottom', () => {
+      // Tomato with basil (companion) to right and carrot (companion) below
+      const companionArrangement = {
+        grid: [
+          ['tomato', 'basil'],
+          ['carrot', null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'basil', row: 0, col: 1 },
+          { plantId: 'carrot', row: 1, col: 0 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      expect(tomatoCell).toHaveStyle({
+        borderRight: '3px solid rgb(34, 197, 94)',
+        borderBottom: '3px solid rgb(34, 197, 94)'
+      });
+    });
+
+    it('should not apply borders to empty squares', () => {
       render(<PlanningGrid {...defaultProps} />);
 
       const emptyCell = screen.getByTitle('Empty (1, 1)');
-      expect(emptyCell).toHaveStyle({ boxShadow: 'none' });
+      const styles = window.getComputedStyle(emptyCell);
+      // Empty cells should not have green or red borders
+      expect(styles.borderRight).not.toContain('rgb(34, 197, 94)');
+      expect(styles.borderRight).not.toContain('rgb(239, 68, 68)');
+      expect(styles.borderBottom).not.toContain('rgb(34, 197, 94)');
+      expect(styles.borderBottom).not.toContain('rgb(239, 68, 68)');
     });
 
-    it('should not apply tint to squares with no companions or enemies nearby', () => {
+    it('should not apply borders to squares with no companions or enemies nearby', () => {
       // Single tomato with no adjacent plants
       const isolatedArrangement = {
         grid: [
@@ -714,7 +735,74 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={isolatedArrangement} bed={largeBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      expect(tomatoCell).toHaveStyle({ boxShadow: 'none' });
+      const styles = window.getComputedStyle(tomatoCell);
+      // Should not have green or red borders
+      expect(styles.borderRight).not.toContain('rgb(34, 197, 94)');
+      expect(styles.borderRight).not.toContain('rgb(239, 68, 68)');
+      expect(styles.borderBottom).not.toContain('rgb(34, 197, 94)');
+      expect(styles.borderBottom).not.toContain('rgb(239, 68, 68)');
+    });
+
+    it('should render corner marker for diagonal companion relationship', () => {
+      // Tomato with carrot diagonally at bottom-right
+      const diagonalArrangement = {
+        grid: [
+          ['tomato', null],
+          [null, 'carrot']
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'carrot', row: 1, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={diagonalArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const cornerMarker = screen.getByTestId('corner-marker');
+      expect(cornerMarker).toBeInTheDocument();
+      expect(cornerMarker).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
+    });
+
+    it('should render red corner marker for diagonal enemy relationship', () => {
+      // Tomato with potato diagonally at bottom-right
+      const diagonalArrangement = {
+        grid: [
+          ['tomato', null],
+          [null, 'potato']
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'potato', row: 1, col: 1 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={diagonalArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      const cornerMarker = screen.getByTestId('corner-marker');
+      expect(cornerMarker).toBeInTheDocument();
+      expect(cornerMarker).toHaveStyle({ backgroundColor: 'rgb(239, 68, 68)' });
+    });
+
+    it('should not render corner marker when no diagonal relationship', () => {
+      // Tomato with no diagonal relationships
+      const nodiagonalArrangement = {
+        grid: [
+          ['tomato', 'basil'],
+          ['carrot', null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'basil', row: 0, col: 1 },
+          { plantId: 'carrot', row: 1, col: 0 }
+        ],
+        success: true
+      };
+
+      render(<PlanningGrid arrangement={nodiagonalArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
+
+      expect(screen.queryByTestId('corner-marker')).not.toBeInTheDocument();
     });
   });
 

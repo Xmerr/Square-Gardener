@@ -11,6 +11,7 @@ import {
   addGardenBed,
   getBedById,
   updateGardenBed,
+  updateBedGrid,
   removeGardenBed,
   reorderBeds,
   getPlantsByBed,
@@ -532,6 +533,165 @@ describe('storage utilities', () => {
       addGardenBed('Test Bed', 4, 4);
       const result = updateGardenBed('non-existent-id', { name: 'New Name' });
       expect(result).toBeNull();
+    });
+
+    it('clears grid when width changes', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { width: 6 });
+      expect(result.grid).toBeNull();
+    });
+
+    it('clears grid when height changes', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { height: 6 });
+      expect(result.grid).toBeNull();
+    });
+
+    it('clears grid when both width and height change', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { width: 6, height: 6 });
+      expect(result.grid).toBeNull();
+    });
+
+    it('does not clear grid when dimensions stay the same', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { name: 'New Name' });
+      expect(result.grid).toEqual(grid);
+    });
+
+    it('does not clear grid for pots', () => {
+      const pot = addGardenBed('Test Pot', null, null, { is_pot: true, size: 'medium' });
+      const grid = [['aloe']];
+      updateBedGrid(pot.id, grid);
+
+      const result = updateGardenBed(pot.id, { size: 'large' });
+      expect(result.grid).toEqual(grid);
+    });
+
+    it('does not clear grid when width update is same as current width', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { width: 4 });
+      expect(result.grid).toEqual(grid);
+    });
+
+    it('does not clear grid when height update is same as current height', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateGardenBed(bed.id, { height: 4 });
+      expect(result.grid).toEqual(grid);
+    });
+  });
+
+  describe('updateBedGrid', () => {
+    it('saves grid to bed', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+
+      const result = updateBedGrid(bed.id, grid);
+      expect(result.grid).toEqual(grid);
+    });
+
+    it('updates updatedAt timestamp', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const originalUpdatedAt = bed.updatedAt;
+      const grid = [
+        ['tomato', null, null, null],
+        [null, null, null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+
+      const result = updateBedGrid(bed.id, grid);
+      expect(new Date(result.updatedAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(originalUpdatedAt).getTime()
+      );
+    });
+
+    it('returns null for non-existent bed', () => {
+      const grid = [['tomato']];
+      const result = updateBedGrid('non-existent-id', grid);
+      expect(result).toBeNull();
+    });
+
+    it('can update grid to null', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', null, null, null],
+        [null, null, null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+      updateBedGrid(bed.id, grid);
+
+      const result = updateBedGrid(bed.id, null);
+      expect(result.grid).toBeNull();
+    });
+
+    it('persists grid to storage', () => {
+      const bed = addGardenBed('Test Bed', 4, 4);
+      const grid = [
+        ['tomato', 'lettuce', null, null],
+        ['tomato', 'lettuce', null, null],
+        [null, null, null, null],
+        [null, null, null, null]
+      ];
+
+      updateBedGrid(bed.id, grid);
+      const beds = getGardenBeds();
+      const savedBed = beds.find(b => b.id === bed.id);
+      expect(savedBed.grid).toEqual(grid);
     });
   });
 

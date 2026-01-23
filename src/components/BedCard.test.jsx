@@ -1,6 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import BedCard from './BedCard';
+
+// Helper to render BedCard wrapped in MemoryRouter
+const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 // Mock the storage module
 vi.mock('../utils/storage', () => ({
@@ -65,7 +69,7 @@ describe('BedCard', () => {
     };
 
     it('displays bed icon, name, and dimensions', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -82,7 +86,7 @@ describe('BedCard', () => {
     });
 
     it('displays capacity meter for beds', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -99,7 +103,7 @@ describe('BedCard', () => {
     });
 
     it('displays plant count singular', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -114,7 +118,7 @@ describe('BedCard', () => {
     });
 
     it('displays plant count plural', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -129,7 +133,7 @@ describe('BedCard', () => {
     });
 
     it('displays zero plants correctly', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -145,7 +149,7 @@ describe('BedCard', () => {
 
     it('shows green color when under 90% capacity', () => {
       const capacity = { total: 16, used: 8, available: 8, isOvercapacity: false };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -162,7 +166,7 @@ describe('BedCard', () => {
 
     it('shows yellow color when at 90% capacity', () => {
       const capacity = { total: 16, used: 14.4, available: 1.6, isOvercapacity: false };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -179,7 +183,7 @@ describe('BedCard', () => {
 
     it('shows red color when overcapacity', () => {
       const capacity = { total: 16, used: 20, available: -4, isOvercapacity: true };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -196,7 +200,7 @@ describe('BedCard', () => {
 
     it('caps progress bar at 100%', () => {
       const capacity = { total: 16, used: 24, available: -8, isOvercapacity: true };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -214,7 +218,7 @@ describe('BedCard', () => {
     it('handles zero capacity', () => {
       const capacity = { total: 0, used: 0, available: 0, isOvercapacity: false };
       const zeroBed = { ...mockBed, width: 0, height: 0 };
-      render(
+      renderWithRouter(
         <BedCard
           bed={zeroBed}
           capacity={capacity}
@@ -231,7 +235,7 @@ describe('BedCard', () => {
 
     it('shows overcapacity warning badge', () => {
       const capacity = { total: 16, used: 18, available: -2, isOvercapacity: true };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -246,7 +250,7 @@ describe('BedCard', () => {
     });
 
     it('does not show warning when not overcapacity', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -262,7 +266,7 @@ describe('BedCard', () => {
 
     it('shows overcapacity text styling', () => {
       const capacity = { total: 16, used: 18, available: -2, isOvercapacity: true };
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={capacity}
@@ -277,7 +281,7 @@ describe('BedCard', () => {
     });
 
     it('calls onEdit when edit clicked', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -293,7 +297,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDelete when delete clicked', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -316,7 +320,7 @@ describe('BedCard', () => {
         height: 4
       };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={bedWithoutFlag}
           capacity={mockCapacity}
@@ -362,7 +366,7 @@ describe('BedCard', () => {
     });
 
     it('is draggable when onDragStart is provided', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -379,7 +383,7 @@ describe('BedCard', () => {
     });
 
     it('is not draggable when onDragStart is not provided', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -395,7 +399,7 @@ describe('BedCard', () => {
     });
 
     it('shows drag handle when onDragStart is provided', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -411,7 +415,7 @@ describe('BedCard', () => {
     });
 
     it('drag handle stops propagation on mousedown', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -432,7 +436,7 @@ describe('BedCard', () => {
     });
 
     it('does not show drag handle when onDragStart is not provided', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -447,7 +451,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDragStart when drag starts', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -467,7 +471,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDragEnd when drag ends', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -487,7 +491,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDragOver when dragging over', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -507,7 +511,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDrop when dropped', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -527,7 +531,7 @@ describe('BedCard', () => {
     });
 
     it('applies opacity when isDragging is true', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -545,7 +549,7 @@ describe('BedCard', () => {
     });
 
     it('does not apply opacity when isDragging is false', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -563,7 +567,7 @@ describe('BedCard', () => {
     });
 
     it('does not call drag handlers when not provided', () => {
-      const { container } = render(
+      const { container } = renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -614,7 +618,7 @@ describe('BedCard', () => {
     });
 
     it('shows move up button when onMoveUp and showMoveUp are provided', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -631,7 +635,7 @@ describe('BedCard', () => {
     });
 
     it('does not show move up button when showMoveUp is false', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -648,7 +652,7 @@ describe('BedCard', () => {
     });
 
     it('shows move down button when onMoveDown and showMoveDown are provided', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -665,7 +669,7 @@ describe('BedCard', () => {
     });
 
     it('does not show move down button when showMoveDown is false', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -682,7 +686,7 @@ describe('BedCard', () => {
     });
 
     it('calls onMoveUp when move up button is clicked', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -702,7 +706,7 @@ describe('BedCard', () => {
     });
 
     it('calls onMoveDown when move down button is clicked', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -722,7 +726,7 @@ describe('BedCard', () => {
     });
 
     it('does not show move buttons when handlers not provided', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockBed}
           capacity={mockCapacity}
@@ -754,7 +758,7 @@ describe('BedCard', () => {
     };
 
     it('displays pot icon, name, and size label', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -771,7 +775,7 @@ describe('BedCard', () => {
     });
 
     it('does not display capacity meter for pots', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -787,7 +791,7 @@ describe('BedCard', () => {
     });
 
     it('displays plant count for pots', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -807,7 +811,7 @@ describe('BedCard', () => {
         { id: 'gp-2', plantId: 'aloe', bedId: 'pot-1', quantity: 1 }
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -827,7 +831,7 @@ describe('BedCard', () => {
         { id: 'gp-2', plantId: 'aloe', bedId: 'pot-1' }  // No quantity
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -847,7 +851,7 @@ describe('BedCard', () => {
         { id: 'gp-2', plantId: 'lettuce', bedId: 'pot-1', quantity: 2 }
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -862,7 +866,7 @@ describe('BedCard', () => {
     });
 
     it('displays "No plants" when pot has no plants', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -877,7 +881,7 @@ describe('BedCard', () => {
     });
 
     it('handles plants array as undefined', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -897,7 +901,7 @@ describe('BedCard', () => {
         { id: 'gp-2', plantId: 'aloe', bedId: 'pot-1', quantity: 1 }
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -913,7 +917,7 @@ describe('BedCard', () => {
     });
 
     it('calls onEdit when edit clicked on pot', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -929,7 +933,7 @@ describe('BedCard', () => {
     });
 
     it('calls onDelete when delete clicked on pot', () => {
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -947,7 +951,7 @@ describe('BedCard', () => {
     it('displays small pot size correctly', () => {
       const smallPot = { ...mockPot, size: 'small' };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={smallPot}
           capacity={mockCapacity}
@@ -964,7 +968,7 @@ describe('BedCard', () => {
     it('displays large pot size correctly', () => {
       const largePot = { ...mockPot, size: 'large' };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={largePot}
           capacity={mockCapacity}
@@ -981,7 +985,7 @@ describe('BedCard', () => {
     it('displays extra large pot size correctly', () => {
       const extraLargePot = { ...mockPot, size: 'extra_large' };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={extraLargePot}
           capacity={mockCapacity}
@@ -998,7 +1002,7 @@ describe('BedCard', () => {
     it('handles missing size gracefully', () => {
       const potWithoutSize = { ...mockPot, size: undefined };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={potWithoutSize}
           capacity={mockCapacity}
@@ -1016,7 +1020,7 @@ describe('BedCard', () => {
     it('handles invalid size gracefully', () => {
       const potWithInvalidSize = { ...mockPot, size: 'invalid-size' };
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={potWithInvalidSize}
           capacity={mockCapacity}
@@ -1037,7 +1041,7 @@ describe('BedCard', () => {
         { id: 'gp-2', plantId: 'aloe', bedId: 'pot-1', quantity: 3 }
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
@@ -1056,7 +1060,7 @@ describe('BedCard', () => {
         { id: 'gp-1', plantId: 'aloe', bedId: 'pot-1' }
       ];
 
-      render(
+      renderWithRouter(
         <BedCard
           bed={mockPot}
           capacity={mockCapacity}
