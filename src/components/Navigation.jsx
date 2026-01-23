@@ -13,7 +13,7 @@ function Navigation() {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `block px-4 py-2 rounded-md text-base font-medium transition-colors ${
+    `block px-4 py-2 rounded-md text-base font-medium transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-blue-600 focus-visible:outline-offset-2 ${
       isActive
         ? 'bg-primary text-white'
         : 'text-gray-700 hover:bg-primary-light hover:text-white'
@@ -34,7 +34,7 @@ function Navigation() {
           <span className="text-sm font-medium text-gray-700">Menu</span>
           <button
             onClick={toggleMobileMenu}
-            className="p-2 rounded-md text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+            className="p-2 rounded-md text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-3 focus-visible:outline-blue-600 focus-visible:outline-offset-2 transition-colors"
             aria-label="Toggle navigation menu"
             aria-expanded={isMobileMenuOpen}
           >
@@ -95,7 +95,7 @@ function Navigation() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-md text-base font-medium whitespace-nowrap transition-colors ${
+                `px-4 py-2 rounded-md text-base font-medium whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-blue-600 focus-visible:outline-offset-2 ${
                   isActive
                     ? 'bg-primary text-white'
                     : 'text-gray-700 hover:bg-primary-light hover:text-white'

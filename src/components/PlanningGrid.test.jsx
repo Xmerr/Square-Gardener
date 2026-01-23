@@ -408,6 +408,102 @@ describe('PlanningGrid', () => {
       // Should not throw error
       expect(screen.getByText('Garden Layout (2×2)')).toBeInTheDocument();
     });
+
+    it('should accept drops from plant palette', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+
+      // Simulate dropping from palette
+      const dropEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          getData: vi.fn(() => 'lettuce')
+        }
+      };
+
+      fireEvent.dragOver(emptyCell, { preventDefault: vi.fn() });
+      fireEvent.drop(emptyCell, dropEvent);
+
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      const newArrangement = editableProps.onArrangementChange.mock.calls[0][0];
+      expect(newArrangement.grid[1][1]).toBe('lettuce');
+    });
+
+    it('should replace existing plant when dropping from palette', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+
+      // Simulate dropping lettuce on tomato
+      const dropEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          getData: vi.fn(() => 'lettuce')
+        }
+      };
+
+      fireEvent.dragOver(tomatoCell, { preventDefault: vi.fn() });
+      fireEvent.drop(tomatoCell, dropEvent);
+
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      const newArrangement = editableProps.onArrangementChange.mock.calls[0][0];
+      expect(newArrangement.grid[0][0]).toBe('lettuce');
+    });
+
+    it('should not allow palette drop on locked squares', () => {
+      const lockedSquares = [
+        [false, false],
+        [false, true]
+      ];
+      render(<PlanningGrid {...editableProps} lockedSquares={lockedSquares} />);
+
+      const lockedCell = screen.getByTitle('Empty (1, 1)');
+
+      const dropEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          getData: vi.fn(() => 'lettuce')
+        }
+      };
+
+      fireEvent.dragOver(lockedCell, { preventDefault: vi.fn() });
+      fireEvent.drop(lockedCell, dropEvent);
+
+      expect(editableProps.onArrangementChange).not.toHaveBeenCalled();
+    });
+
+    it('should validate arrangement after palette drop', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+
+      // Simulate dropping potato (enemy of tomato)
+      const dropEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          getData: vi.fn(() => 'potato')
+        }
+      };
+
+      fireEvent.dragOver(emptyCell, { preventDefault: vi.fn() });
+      fireEvent.drop(emptyCell, dropEvent);
+
+      expect(editableProps.onArrangementChange).toHaveBeenCalled();
+      // Validation should be called internally
+    });
+
+    it('should accept dragOver without draggedSquare when palette is dragging', () => {
+      render(<PlanningGrid {...editableProps} />);
+
+      const emptyCell = screen.getByTitle('Empty (1, 1)');
+
+      // DragOver should work even without a draggedSquare (palette drag)
+      const dragOverEvent = { preventDefault: vi.fn() };
+      fireEvent.dragOver(emptyCell, dragOverEvent);
+
+      expect(dragOverEvent.preventDefault).toHaveBeenCalled();
+    });
   });
 
   describe('validation feedback', () => {
@@ -636,9 +732,11 @@ describe('PlanningGrid', () => {
 
       render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
-      // Tomato should have green right border (basil is to the right)
+      // Tomato should have green right indicator (basil is to the right)
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      expect(tomatoCell).toHaveStyle({ borderRight: '3px solid rgb(34, 197, 94)' });
+      const rightIndicator = tomatoCell.querySelector('[data-testid="right-indicator"]');
+      expect(rightIndicator).toBeInTheDocument();
+      expect(rightIndicator).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
     });
 
     it('should apply red border to square with enemy to the right', () => {
@@ -658,7 +756,9 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={enemyArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      expect(tomatoCell).toHaveStyle({ borderRight: '3px solid rgb(239, 68, 68)' });
+      const rightIndicator = tomatoCell.querySelector('[data-testid="right-indicator"]');
+      expect(rightIndicator).toBeInTheDocument();
+      expect(rightIndicator).toHaveStyle({ backgroundColor: 'rgb(239, 68, 68)' });
     });
 
     it('should apply green border to square with companion below', () => {
@@ -678,7 +778,9 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      expect(tomatoCell).toHaveStyle({ borderBottom: '3px solid rgb(34, 197, 94)' });
+      const bottomIndicator = tomatoCell.querySelector('[data-testid="bottom-indicator"]');
+      expect(bottomIndicator).toBeInTheDocument();
+      expect(bottomIndicator).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
     });
 
     it('should apply both borders when companions are on right and bottom', () => {
@@ -699,22 +801,23 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={companionArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      expect(tomatoCell).toHaveStyle({
-        borderRight: '3px solid rgb(34, 197, 94)',
-        borderBottom: '3px solid rgb(34, 197, 94)'
-      });
+      const rightIndicator = tomatoCell.querySelector('[data-testid="right-indicator"]');
+      const bottomIndicator = tomatoCell.querySelector('[data-testid="bottom-indicator"]');
+      expect(rightIndicator).toBeInTheDocument();
+      expect(rightIndicator).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
+      expect(bottomIndicator).toBeInTheDocument();
+      expect(bottomIndicator).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
     });
 
     it('should not apply borders to empty squares', () => {
       render(<PlanningGrid {...defaultProps} />);
 
       const emptyCell = screen.getByTitle('Empty (1, 1)');
-      const styles = window.getComputedStyle(emptyCell);
-      // Empty cells should not have green or red borders
-      expect(styles.borderRight).not.toContain('rgb(34, 197, 94)');
-      expect(styles.borderRight).not.toContain('rgb(239, 68, 68)');
-      expect(styles.borderBottom).not.toContain('rgb(34, 197, 94)');
-      expect(styles.borderBottom).not.toContain('rgb(239, 68, 68)');
+      // Empty cells should not have companion/enemy indicators
+      const rightIndicator = emptyCell.querySelector('[data-testid="right-indicator"]');
+      const bottomIndicator = emptyCell.querySelector('[data-testid="bottom-indicator"]');
+      expect(rightIndicator).not.toBeInTheDocument();
+      expect(bottomIndicator).not.toBeInTheDocument();
     });
 
     it('should not apply borders to squares with no companions or enemies nearby', () => {
@@ -735,12 +838,11 @@ describe('PlanningGrid', () => {
       render(<PlanningGrid arrangement={isolatedArrangement} bed={largeBed} onSquareClick={vi.fn()} />);
 
       const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
-      const styles = window.getComputedStyle(tomatoCell);
-      // Should not have green or red borders
-      expect(styles.borderRight).not.toContain('rgb(34, 197, 94)');
-      expect(styles.borderRight).not.toContain('rgb(239, 68, 68)');
-      expect(styles.borderBottom).not.toContain('rgb(34, 197, 94)');
-      expect(styles.borderBottom).not.toContain('rgb(239, 68, 68)');
+      // Should not have companion/enemy indicators
+      const rightIndicator = tomatoCell.querySelector('[data-testid="right-indicator"]');
+      const bottomIndicator = tomatoCell.querySelector('[data-testid="bottom-indicator"]');
+      expect(rightIndicator).not.toBeInTheDocument();
+      expect(bottomIndicator).not.toBeInTheDocument();
     });
 
     it('should render corner marker for diagonal companion relationship', () => {
@@ -759,7 +861,8 @@ describe('PlanningGrid', () => {
 
       render(<PlanningGrid arrangement={diagonalArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
-      const cornerMarker = screen.getByTestId('corner-marker');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const cornerMarker = tomatoCell.querySelector('[data-testid="corner-marker"]');
       expect(cornerMarker).toBeInTheDocument();
       expect(cornerMarker).toHaveStyle({ backgroundColor: 'rgb(34, 197, 94)' });
     });
@@ -780,7 +883,8 @@ describe('PlanningGrid', () => {
 
       render(<PlanningGrid arrangement={diagonalArrangement} bed={mockBed} onSquareClick={vi.fn()} />);
 
-      const cornerMarker = screen.getByTestId('corner-marker');
+      const tomatoCell = screen.getByTitle(/^Tomato \(0, 0\)/);
+      const cornerMarker = tomatoCell.querySelector('[data-testid="corner-marker"]');
       expect(cornerMarker).toBeInTheDocument();
       expect(cornerMarker).toHaveStyle({ backgroundColor: 'rgb(239, 68, 68)' });
     });

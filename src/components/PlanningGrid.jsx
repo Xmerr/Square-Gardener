@@ -115,7 +115,7 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
   };
 
   const handleDragOver = (e, row, col) => {
-    if (!editable || !draggedSquare) return;
+    if (!editable) return;
 
     e.preventDefault();
     setDragOverSquare({ row, col });
@@ -124,7 +124,39 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
   const handleDrop = (e, targetRow, targetCol) => {
     e.preventDefault();
 
-    if (!editable || !draggedSquare || lockedSquares?.[targetRow]?.[targetCol]) {
+    if (!editable || lockedSquares?.[targetRow]?.[targetCol]) {
+      setDraggedSquare(null);
+      setDragOverSquare(null);
+      return;
+    }
+
+    // Check if dragging from plant palette (external source)
+    const paletteData = e.dataTransfer.getData('plant-id');
+
+    if (paletteData) {
+      // Dropping from palette - replace the square
+      const newGrid = grid.map(row => [...row]);
+      newGrid[targetRow][targetCol] = paletteData;
+
+      // Validate the new arrangement
+      const validationResult = validateArrangement(newGrid);
+      setValidation(validationResult);
+
+      // Update the arrangement
+      if (onArrangementChange) {
+        onArrangementChange({
+          ...arrangement,
+          grid: newGrid
+        });
+      }
+
+      setDraggedSquare(null);
+      setDragOverSquare(null);
+      return;
+    }
+
+    // Original logic for grid-to-grid dragging
+    if (!draggedSquare) {
       setDraggedSquare(null);
       setDragOverSquare(null);
       return;
@@ -210,15 +242,6 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
 
                 // Get edge borders for border-based visualization
                 const edgeBorders = getSquareEdgeBorders(grid, rowIndex, colIndex);
-                const borderWidth = '3px';
-                const companionColor = '#22c55e';
-                const enemyColor = '#ef4444';
-
-                // Only render right/bottom borders (ownership rule to prevent doubled borders)
-                const borderRight = edgeBorders?.right === 'enemy' ? `${borderWidth} solid ${enemyColor}` :
-                                   edgeBorders?.right === 'companion' ? `${borderWidth} solid ${companionColor}` : 'none';
-                const borderBottom = edgeBorders?.bottom === 'enemy' ? `${borderWidth} solid ${enemyColor}` :
-                                    edgeBorders?.bottom === 'companion' ? `${borderWidth} solid ${companionColor}` : 'none';
 
                 return (
                   <button
@@ -233,17 +256,47 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                     className={`${cellSize} rounded flex items-center justify-center font-medium transition-transform hover:scale-105 relative ${
                       isLocked ? 'ring-2 ring-gray-400' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''} ${editable && plantId && !isLocked ? 'cursor-move' : ''}`}
-                    style={{ backgroundColor: bgColor, color: textColor, borderRight, borderBottom }}
+                    style={{ backgroundColor: bgColor, color: textColor }}
                     title={tooltip + (editable && plantId && !isLocked ? '\nRight-click or Ctrl+Click to delete' : '')}
                   >
                     {displayInitial}
                     {isLocked && (
                       <span className="absolute -top-1 -right-1 text-xs">🔒</span>
                     )}
+                    {/* Companion/Enemy relationship lines with improved visibility */}
+                    {edgeBorders?.right && (
+                      <span
+                        className="absolute top-1 bottom-1 right-0 w-1"
+                        style={{
+                          backgroundColor: edgeBorders.right === 'enemy' ? '#ef4444' : '#22c55e',
+                          boxShadow: edgeBorders.right === 'enemy'
+                            ? '0 0 3px rgba(239, 68, 68, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                            : '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                        }}
+                        data-testid="right-indicator"
+                      />
+                    )}
+                    {edgeBorders?.bottom && (
+                      <span
+                        className="absolute left-1 right-1 bottom-0 h-1"
+                        style={{
+                          backgroundColor: edgeBorders.bottom === 'enemy' ? '#ef4444' : '#22c55e',
+                          boxShadow: edgeBorders.bottom === 'enemy'
+                            ? '0 0 3px rgba(239, 68, 68, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                            : '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                        }}
+                        data-testid="bottom-indicator"
+                      />
+                    )}
                     {edgeBorders?.bottomRight && (
                       <span
-                        className="absolute -bottom-1 -right-1 w-1.5 h-1.5 rounded-full z-10"
-                        style={{ backgroundColor: edgeBorders.bottomRight === 'enemy' ? enemyColor : companionColor }}
+                        className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full z-10"
+                        style={{
+                          backgroundColor: edgeBorders.bottomRight === 'enemy' ? '#ef4444' : '#22c55e',
+                          boxShadow: edgeBorders.bottomRight === 'enemy'
+                            ? '0 0 3px rgba(239, 68, 68, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                            : '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                        }}
                         data-testid="corner-marker"
                       />
                     )}
@@ -279,26 +332,57 @@ function PlanningGrid({ arrangement, bed, onSquareClick, lockedSquares, onArrang
                 <div className="flex items-center gap-2">
                   <div
                     className="w-6 h-6 rounded bg-gray-300 relative"
-                    style={{ borderRight: '3px solid #22c55e', borderBottom: '3px solid #22c55e' }}
                     aria-hidden="true"
                     data-testid="legend-companion"
-                  />
+                  >
+                    <span
+                      className="absolute top-1 bottom-1 right-0 w-1"
+                      style={{
+                        backgroundColor: '#22c55e',
+                        boxShadow: '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                      }}
+                    />
+                    <span
+                      className="absolute left-1 right-1 bottom-0 h-1"
+                      style={{
+                        backgroundColor: '#22c55e',
+                        boxShadow: '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                      }}
+                    />
+                  </div>
                   <span className="text-xs text-gray-600">Good companion nearby</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div
                     className="w-6 h-6 rounded bg-gray-300 relative"
-                    style={{ borderRight: '3px solid #ef4444', borderBottom: '3px solid #ef4444' }}
                     aria-hidden="true"
                     data-testid="legend-enemy"
-                  />
+                  >
+                    <span
+                      className="absolute top-1 bottom-1 right-0 w-1"
+                      style={{
+                        backgroundColor: '#ef4444',
+                        boxShadow: '0 0 3px rgba(239, 68, 68, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                      }}
+                    />
+                    <span
+                      className="absolute left-1 right-1 bottom-0 h-1"
+                      style={{
+                        backgroundColor: '#ef4444',
+                        boxShadow: '0 0 3px rgba(239, 68, 68, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                      }}
+                    />
+                  </div>
                   <span className="text-xs text-gray-600">Incompatible plant nearby</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded bg-gray-300 relative flex items-center justify-center">
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: '#22c55e' }}
+                      className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: '#22c55e',
+                        boxShadow: '0 0 3px rgba(34, 197, 94, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.3)'
+                      }}
                       aria-hidden="true"
                       data-testid="legend-diagonal"
                     />

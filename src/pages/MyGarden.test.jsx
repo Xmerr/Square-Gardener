@@ -358,6 +358,13 @@ describe('MyGarden', () => {
       fireEvent.click(screen.getByText('Browse Plant Library'));
       expect(screen.getByRole('combobox')).toBeInTheDocument();
     });
+
+    it('defaults season filter to all', () => {
+      renderMyGarden();
+      fireEvent.click(screen.getByText('Browse Plant Library'));
+      const seasonSelect = screen.getByRole('combobox');
+      expect(seasonSelect).toHaveValue('all');
+    });
   });
 
   describe('search and filter', () => {

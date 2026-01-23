@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import App from './App';
 
 vi.mock('./utils/storage', () => ({
-  getGardenPlants: vi.fn(() => [])
+  getGardenPlants: vi.fn(() => []),
+  getGardenBeds: vi.fn(() => [])
 }));
 
 describe('App', () => {
