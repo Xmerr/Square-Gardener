@@ -211,7 +211,7 @@ function MyGarden() {
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🌿</span>
                   <span className="text-lg font-medium text-gray-700">
-                    {gardenPlants.length} {gardenPlants.length === 1 ? 'plant' : 'plants'} in your garden
+                    {gardenPlants.length} {gardenPlants.length === 1 ? 'square' : 'squares'} in your garden
                   </span>
                 </div>
                 <button

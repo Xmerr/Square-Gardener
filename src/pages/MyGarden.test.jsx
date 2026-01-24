@@ -219,7 +219,7 @@ describe('MyGarden', () => {
 
     it('displays plant count', () => {
       renderMyGarden();
-      expect(screen.getByText('2 plants in your garden')).toBeInTheDocument();
+      expect(screen.getByText('2 squares in your garden')).toBeInTheDocument();
     });
 
     it('displays single plant text correctly', () => {
@@ -235,7 +235,7 @@ describe('MyGarden', () => {
         }
       ]);
       renderMyGarden();
-      expect(screen.getByText('1 plant in your garden')).toBeInTheDocument();
+      expect(screen.getByText('1 square in your garden')).toBeInTheDocument();
     });
 
     it('groups plants by bed', () => {
@@ -635,7 +635,7 @@ describe('MyGarden', () => {
       plantLibraryModule.getPlantById.mockReturnValue(undefined);
 
       renderMyGarden();
-      expect(screen.getByText('1 plant in your garden')).toBeInTheDocument();
+      expect(screen.getByText('1 square in your garden')).toBeInTheDocument();
     });
   });
 
