@@ -1,5 +1,5 @@
 # Square Gardener
-
+ 
 A React-based web application for managing square foot gardens. Track plants, watering schedules, and harvest times with an intuitive interface.
 
 ## Live Demo
