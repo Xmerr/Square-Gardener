@@ -417,11 +417,91 @@ export const getCompanionPlants = (plantId) => {
 };
 
 /**
- * Check if two plants are compatible
+ * Validate plant library for conflicting companion/enemy relationships
+ * Logs warnings if a plant lists another as both companion and enemy
+ */
+const validatePlantRelationships = () => {
+  const warnings = [];
+
+  plantLibrary.forEach(plant => {
+    const conflictingPlants = plant.companionPlants.filter(id =>
+      plant.avoidPlants.includes(id)
+    );
+
+    if (conflictingPlants.length > 0) {
+      conflictingPlants.forEach(conflictId => {
+        const conflictingPlant = getPlantById(conflictId);
+        warnings.push(
+          `WARNING: ${plant.name} lists ${conflictingPlant?.name || conflictId} as both companion and enemy. Treating as enemy.`
+        );
+      });
+    }
+  });
+
+  return warnings;
+};
+
+// Run validation and log warnings
+if (typeof window !== 'undefined') {
+  const warnings = validatePlantRelationships();
+  warnings.forEach(warning => console.warn(warning));
+}
+
+/**
+ * Check if two plants are compatible using union logic
+ * Two plants are compatible if NEITHER lists the other as an enemy
+ * @param {string} plantId1 - First plant ID
+ * @param {string} plantId2 - Second plant ID
+ * @returns {boolean} True if plants are compatible (not enemies)
  */
 export const arePlantsCompatible = (plantId1, plantId2) => {
   const plant1 = getPlantById(plantId1);
-  if (!plant1) return true;
+  const plant2 = getPlantById(plantId2);
 
-  return !plant1.avoidPlants.includes(plantId2);
+  if (!plant1 || !plant2) return true;
+
+  // Check both directions - if EITHER plant lists the other as an enemy, they're incompatible
+  const plant1AvoidsPlant2 = plant1.avoidPlants.includes(plantId2);
+  const plant2AvoidsPlant1 = plant2.avoidPlants.includes(plantId1);
+
+  return !plant1AvoidsPlant2 && !plant2AvoidsPlant1;
+};
+
+/**
+ * Check if two plants are companions using union logic
+ * Two plants are companions if EITHER lists the other as a companion
+ * BUT if there's a conflict (one lists as enemy), treat as enemy
+ * @param {string} plantId1 - First plant ID
+ * @param {string} plantId2 - Second plant ID
+ * @returns {boolean} True if plants are companions
+ */
+export const arePlantsCompanions = (plantId1, plantId2) => {
+  const plant1 = getPlantById(plantId1);
+  const plant2 = getPlantById(plantId2);
+
+  if (!plant1 || !plant2) return false;
+
+  // Check if either plant lists the other as an enemy (conflict takes precedence)
+  const plant1AvoidsPlant2 = plant1.avoidPlants.includes(plantId2);
+  const plant2AvoidsPlant1 = plant2.avoidPlants.includes(plantId1);
+
+  if (plant1AvoidsPlant2 || plant2AvoidsPlant1) {
+    // If there's a conflict, log a warning
+    const plant1HasAsCompanion = plant1.companionPlants.includes(plantId2);
+    const plant2HasAsCompanion = plant2.companionPlants.includes(plantId1);
+
+    if (plant1HasAsCompanion || plant2HasAsCompanion) {
+      console.warn(
+        `CONFLICT: ${plant1.name} and ${plant2.name} have conflicting companion/enemy relationships. Treating as enemies.`
+      );
+    }
+
+    return false; // Enemy relationship takes precedence
+  }
+
+  // Check if EITHER plant lists the other as a companion (union logic)
+  const plant1HasAsCompanion = plant1.companionPlants.includes(plantId2);
+  const plant2HasAsCompanion = plant2.companionPlants.includes(plantId1);
+
+  return plant1HasAsCompanion || plant2HasAsCompanion;
 };

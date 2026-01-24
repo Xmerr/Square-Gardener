@@ -106,6 +106,40 @@ describe('getSquareCompanionStatus', () => {
     expect(result.companions).toContain('Carrot');
   });
 
+  it('should detect companions symmetrically (union logic)', () => {
+    // Test carrot-lettuce relationship from both perspectives
+    const grid1 = [
+      ['carrot', 'lettuce'],
+      [null, null]
+    ];
+
+    const resultCarrot = getSquareCompanionStatus(grid1, 0, 0);
+    const resultLettuce = getSquareCompanionStatus(grid1, 0, 1);
+
+    // Both should see each other as companions (union logic)
+    expect(resultCarrot.hasCompanion).toBe(true);
+    expect(resultCarrot.companions).toContain('Lettuce');
+    expect(resultLettuce.hasCompanion).toBe(true);
+    expect(resultLettuce.companions).toContain('Carrot');
+  });
+
+  it('should detect enemies symmetrically (union logic)', () => {
+    // Test tomato-cabbage enemy relationship from both perspectives
+    const grid = [
+      ['tomato', 'cabbage'],
+      [null, null]
+    ];
+
+    const resultTomato = getSquareCompanionStatus(grid, 0, 0);
+    const resultCabbage = getSquareCompanionStatus(grid, 0, 1);
+
+    // Both should see each other as enemies (union logic)
+    expect(resultTomato.hasEnemy).toBe(true);
+    expect(resultTomato.enemies).toContain('Cabbage');
+    expect(resultCabbage.hasEnemy).toBe(true);
+    expect(resultCabbage.enemies).toContain('Tomato');
+  });
+
   it('should handle edge positions correctly', () => {
     const grid = [
       ['basil', 'tomato', 'carrot'],
@@ -386,6 +420,51 @@ describe('getSquareEdgeBorders', () => {
     // Basil has tomato (companion) to the left and cabbage to the right
     // We need to check if tomato is in basil's companion list
     expect(result.left).toBe('companion'); // Tomato is basil's companion
+  });
+
+  it('should show symmetric companion borders (union logic)', () => {
+    // Carrot and lettuce are mutual companions
+    const grid = [
+      ['carrot', 'lettuce'],
+      [null, null]
+    ];
+
+    const resultCarrot = getSquareEdgeBorders(grid, 0, 0);
+    const resultLettuce = getSquareEdgeBorders(grid, 0, 1);
+
+    // Both should show companion border on the shared edge
+    expect(resultCarrot.right).toBe('companion');
+    expect(resultLettuce.left).toBe('companion');
+  });
+
+  it('should show symmetric enemy borders (union logic)', () => {
+    // Tomato and cabbage are enemies
+    const grid = [
+      ['tomato', 'cabbage'],
+      [null, null]
+    ];
+
+    const resultTomato = getSquareEdgeBorders(grid, 0, 0);
+    const resultCabbage = getSquareEdgeBorders(grid, 0, 1);
+
+    // Both should show enemy border on the shared edge
+    expect(resultTomato.right).toBe('enemy');
+    expect(resultCabbage.left).toBe('enemy');
+  });
+
+  it('should show symmetric diagonal relationships', () => {
+    // Test diagonal companion relationship
+    const grid = [
+      ['carrot', null],
+      [null, 'lettuce']
+    ];
+
+    const resultCarrot = getSquareEdgeBorders(grid, 0, 0);
+    const resultLettuce = getSquareEdgeBorders(grid, 1, 1);
+
+    // Both should show companion at the diagonal
+    expect(resultCarrot.bottomRight).toBe('companion');
+    expect(resultLettuce.topLeft).toBe('companion');
   });
 
   it('should handle all 8 directions for a center cell', () => {

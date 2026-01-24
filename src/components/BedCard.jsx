@@ -274,7 +274,7 @@ function BedCard({ bed, capacity, plantCount, plants, onEdit, onDelete, onDragSt
           <svg className="w-4 h-4 mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M5.5 2a3.5 3.5 0 101.665 6.58L8.585 10l-1.42 1.42a3.5 3.5 0 101.414 1.414L10 11.414l1.42 1.42a3.5 3.5 0 101.414-1.414L11.414 10l1.42-1.42A3.5 3.5 0 1014.5 2 3.5 3.5 0 0010 5.5 3.5 3.5 0 005.5 2z" clipRule="evenodd" />
           </svg>
-          {plantCount} {plantCount === 1 ? 'plant' : 'plants'}
+          {plantCount} {plantCount === 1 ? 'square' : 'squares'}
         </div>
         {isPot && (
           <div className="text-xs text-gray-500 ml-5">

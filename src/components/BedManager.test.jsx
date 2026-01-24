@@ -113,8 +113,8 @@ describe('BedManager', () => {
     it('displays plant counts', () => {
       renderWithRouter(<BedManager onBedChange={mockOnBedChange} />);
 
-      expect(screen.getByText('2 plants')).toBeInTheDocument();
-      expect(screen.getByText('1 plant')).toBeInTheDocument();
+      expect(screen.getByText('2 squares')).toBeInTheDocument();
+      expect(screen.getByText('1 square')).toBeInTheDocument();
     });
   });
 

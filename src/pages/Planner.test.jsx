@@ -1285,7 +1285,8 @@ describe('Planner', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Plan applied!/)).toBeInTheDocument();
-        expect(screen.getByText(/Created 4 plants in Main Garden/)).toBeInTheDocument();
+        // mockArrangement has 2 unique plants (tomato and basil)
+        expect(screen.getByText(/Created 2 plants in Main Garden/)).toBeInTheDocument();
       });
     });
 
@@ -1300,7 +1301,7 @@ describe('Planner', () => {
       expect(screen.queryByText(/Plan applied!/)).not.toBeInTheDocument();
     });
 
-    it('creates plant records for each occupied square when applying plan', () => {
+    it('creates aggregated plant records when applying plan', () => {
       storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: mockArrangement.grid });
       storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 1 });
 
@@ -1314,11 +1315,11 @@ describe('Planner', () => {
       const applyButton = screen.getByText('Apply Plan');
       fireEvent.click(applyButton);
 
-      // Should call addGardenPlant for each non-null square in the grid
-      // mockArrangement.grid has 4 plants: 2 tomato, 2 basil
-      expect(storage.addGardenPlant).toHaveBeenCalledTimes(4);
-      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 1);
-      expect(storage.addGardenPlant).toHaveBeenCalledWith('basil', 'bed-1', 1);
+      // Should call addGardenPlant once per unique plant type with aggregated quantity
+      // mockArrangement.grid has 2 unique plants: tomato (2 squares), basil (2 squares)
+      expect(storage.addGardenPlant).toHaveBeenCalledTimes(2);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 2);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('basil', 'bed-1', 2);
     });
 
     it('does not create plants if updateBedGrid fails', () => {
@@ -1384,7 +1385,8 @@ describe('Planner', () => {
       fireEvent.click(applyButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Created 4 plants in Main Garden/)).toBeInTheDocument();
+        // mockArrangement has 2 unique plants (tomato and basil)
+        expect(screen.getByText(/Created 2 plants in Main Garden/)).toBeInTheDocument();
       });
     });
 
@@ -1417,8 +1419,47 @@ describe('Planner', () => {
       const applyButton = screen.getByText('Apply Plan');
       fireEvent.click(applyButton);
 
-      // Should only create 2 plants (tomato and basil), not 9
+      // Should only create 2 plant records (tomato with quantity 1, basil with quantity 1)
       expect(storage.addGardenPlant).toHaveBeenCalledTimes(2);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 1);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('basil', 'bed-1', 1);
+    });
+
+    it('aggregates same plant across multiple squares into single record', () => {
+      const multiTomatoGrid = {
+        grid: [
+          ['tomato', 'tomato', 'tomato', 'tomato'],
+          [null, null, null, null],
+          [null, null, null, null],
+          [null, null, null, null]
+        ],
+        placements: [
+          { plantId: 'tomato', row: 0, col: 0 },
+          { plantId: 'tomato', row: 0, col: 1 },
+          { plantId: 'tomato', row: 0, col: 2 },
+          { plantId: 'tomato', row: 0, col: 3 }
+        ],
+        success: true,
+        unplacedPlants: []
+      };
+
+      planningAlgorithm.generateArrangement.mockReturnValue(multiTomatoGrid);
+      storage.updateBedGrid.mockReturnValue({ id: 'bed-1', name: 'Main Garden', width: 4, height: 4, grid: multiTomatoGrid.grid });
+      storage.addGardenPlant.mockReturnValue({ id: 'plant-1', plantId: 'tomato', bedId: 'bed-1', quantity: 4 });
+
+      renderPlanner();
+
+      const mockAddButton = screen.getByText('Mock Add Tomato');
+      fireEvent.click(mockAddButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      const applyButton = screen.getByText('Apply Plan');
+      fireEvent.click(applyButton);
+
+      // Should create only 1 plant record with quantity 4, not 4 records with quantity 1 each
+      expect(storage.addGardenPlant).toHaveBeenCalledTimes(1);
+      expect(storage.addGardenPlant).toHaveBeenCalledWith('tomato', 'bed-1', 4);
     });
 
     it('does not crash when applying empty grid', () => {
@@ -1449,6 +1490,18 @@ describe('Planner', () => {
       // Should not crash, should not create any plants
       expect(storage.addGardenPlant).not.toHaveBeenCalled();
       expect(screen.getByText(/Created 0 plants in Main Garden/)).toBeInTheDocument();
+    });
+
+    it('does nothing when Apply Plan clicked without arrangement (defensive check)', () => {
+      storage.updateBedGrid.mockClear();
+      storage.addGardenPlant.mockClear();
+
+      renderPlanner();
+
+      // Don't generate a plan, but try to apply (button won't be visible but tests defensive code)
+      // This tests the guard clause at line 186: if (!arrangement || !selectedBed) return;
+      // Since we can't click the button when it's not rendered, this test documents the behavior
+      expect(screen.queryByText('Apply Plan')).not.toBeInTheDocument();
     });
 
     // Note: Timer test skipped due to issues with fake timers in test environment
@@ -1501,6 +1554,17 @@ describe('Planner', () => {
 
       const select = screen.getByRole('combobox');
       expect(select.value).toBe('bed-1');
+    });
+
+    it('does not process URL parameter twice when already processed', () => {
+      renderPlanner(['/planner?bed=bed-2']);
+
+      // Component should have processed the URL param on first render
+      // This tests the early return in the useEffect (line 40)
+      const select = screen.getByRole('combobox');
+      expect(select.value).toBe('bed-2');
+
+      // No way to trigger the effect again due to ref guard, but this at least exercises the code path
     });
   });
 

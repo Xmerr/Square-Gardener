@@ -114,7 +114,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.getByText('1 plant')).toBeInTheDocument();
+      expect(screen.getByText('1 square')).toBeInTheDocument();
     });
 
     it('displays plant count plural', () => {
@@ -129,7 +129,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.getByText('5 plants')).toBeInTheDocument();
+      expect(screen.getByText('5 squares')).toBeInTheDocument();
     });
 
     it('displays zero plants correctly', () => {
@@ -144,7 +144,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.getByText('0 plants')).toBeInTheDocument();
+      expect(screen.getByText('0 squares')).toBeInTheDocument();
     });
 
     it('shows green color when under 90% capacity', () => {
@@ -802,7 +802,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.getByText('2 plants')).toBeInTheDocument();
+      expect(screen.getByText('2 squares')).toBeInTheDocument();
     });
 
     it('displays plant list when pot has plants', () => {
@@ -891,7 +891,7 @@ describe('BedCard', () => {
         />
       );
 
-      expect(screen.getByText('0 plants')).toBeInTheDocument();
+      expect(screen.getByText('0 squares')).toBeInTheDocument();
       expect(screen.getByText('No plants')).toBeInTheDocument();
     });
 

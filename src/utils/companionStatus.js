@@ -1,4 +1,4 @@
-import { getPlantById } from '../data/plantLibrary';
+import { getPlantById, arePlantsCompanions, arePlantsCompatible } from '../data/plantLibrary';
 import { getAdjacentPositions } from './planningAlgorithm';
 
 /**
@@ -33,15 +33,15 @@ export const getSquareCompanionStatus = (grid, row, col) => {
     const adjacentPlant = getPlantById(adjacentPlantId);
     if (!adjacentPlant) continue;
 
-    if (plant.companionPlants.includes(adjacentPlantId)) {
-      if (!companions.includes(adjacentPlant.name)) {
-        companions.push(adjacentPlant.name);
-      }
+    // Use union logic: check if EITHER plant lists the other as companion/enemy
+    const isCompanion = arePlantsCompanions(plantId, adjacentPlantId);
+    const isEnemy = !arePlantsCompatible(plantId, adjacentPlantId);
+
+    if (isCompanion && !companions.includes(adjacentPlant.name)) {
+      companions.push(adjacentPlant.name);
     }
-    if (plant.avoidPlants.includes(adjacentPlantId)) {
-      if (!enemies.includes(adjacentPlant.name)) {
-        enemies.push(adjacentPlant.name);
-      }
+    if (isEnemy && !enemies.includes(adjacentPlant.name)) {
+      enemies.push(adjacentPlant.name);
     }
   }
 
@@ -70,7 +70,7 @@ export const getSquareEdgeBorders = (grid, row, col) => {
   const height = grid.length;
   const width = grid[0].length;
 
-  // Check relationship with specific neighbor
+  // Check relationship with specific neighbor using union logic
   const getRelationship = (neighborRow, neighborCol) => {
     const neighborId = grid[neighborRow]?.[neighborCol];
     if (!neighborId) return null;
@@ -78,8 +78,9 @@ export const getSquareEdgeBorders = (grid, row, col) => {
     const neighborPlant = getPlantById(neighborId);
     if (!neighborPlant) return null;
 
-    const isCompanion = plant.companionPlants.includes(neighborId);
-    const isEnemy = plant.avoidPlants.includes(neighborId);
+    // Use union logic: check if EITHER plant lists the other as companion/enemy
+    const isCompanion = arePlantsCompanions(plantId, neighborId);
+    const isEnemy = !arePlantsCompatible(plantId, neighborId);
 
     // Enemy takes precedence
     if (isEnemy) return 'enemy';

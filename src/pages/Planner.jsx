@@ -189,18 +189,24 @@ function Planner() {
     const result = updateBedGrid(selectedBed.id, arrangement.grid);
     if (!result) return;
 
-    // Then, create plant records for each occupied square
-    let plantsCreated = 0;
+    // Aggregate plants by plantId to get total quantity for each
+    const plantCounts = {};
     const grid = arrangement.grid;
     for (let row = 0; row < grid.length; row++) {
       for (let col = 0; col < grid[row].length; col++) {
         const plantId = grid[row][col];
         if (plantId) {
-          addGardenPlant(plantId, selectedBed.id, 1);
-          plantsCreated++;
+          plantCounts[plantId] = (plantCounts[plantId] || 0) + 1;
         }
       }
     }
+
+    // Create or update plant records for each unique plant
+    let plantsCreated = 0;
+    Object.entries(plantCounts).forEach(([plantId, quantity]) => {
+      addGardenPlant(plantId, selectedBed.id, quantity);
+      plantsCreated++;
+    });
 
     setPlantsCreatedCount(plantsCreated);
     setAppliedSuccess(true);
