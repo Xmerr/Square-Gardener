@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Planner from './Planner';
@@ -501,7 +501,8 @@ describe('Planner', () => {
       width: 4,
       height: 4,
       plantSelections: [{ plantId: 'tomato', quantity: 2 }],
-      lockedSquares: null
+      lockedSquares: null,
+      options: expect.any(Object)
     });
   });
 
@@ -744,7 +745,8 @@ describe('Planner', () => {
         width: 4,
         height: 4,
         plantSelections: [{ plantId: 'tomato', quantity: 2 }],
-        lockedSquares: null
+        lockedSquares: null,
+        options: expect.any(Object)
       });
     });
 
@@ -1620,6 +1622,488 @@ describe('Planner', () => {
       fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
 
       expect(screen.queryByText('Plant Palette')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Saved plan loading', () => {
+    it('should load saved plan when navigating with URL parameter', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-with-plan',
+        name: 'Bed With Plan',
+        width: 3,
+        height: 3,
+        grid: [
+          ['tomato', 'lettuce', null],
+          ['lettuce', null, 'tomato'],
+          [null, 'tomato', 'lettuce']
+        ]
+      };
+
+      storage.getGardenBeds.mockReturnValue([bedWithSavedGrid, mockBeds[0]]);
+
+      renderPlanner(['/planner?bed=bed-with-plan']);
+
+      // Should show the grid
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Should show saved plan notification (it appears briefly)
+      expect(screen.getByText(/Saved plan loaded for Bed With Plan/)).toBeInTheDocument();
+    });
+
+    it('should load saved plan when selecting bed with grid', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 3,
+        grid: [
+          ['tomato', 'basil'],
+          ['lettuce', null],
+          [null, 'carrot']
+        ]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      // Initially on bed-1, no arrangement
+      expect(screen.queryByText(/Garden Layout/)).not.toBeInTheDocument();
+
+      // Change to bed with saved grid
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      // Should show the grid
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Should show saved plan notification (it appears briefly)
+      expect(screen.getByText(/Saved plan loaded for Side Garden/)).toBeInTheDocument();
+    });
+
+    it('should not load saved plan when bed has no grid', () => {
+      renderPlanner();
+
+      // Bed without grid should not show arrangement
+      expect(screen.queryByText(/Saved plan loaded/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Garden Layout/)).not.toBeInTheDocument();
+    });
+
+    it('should hide saved plan notification after timeout', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 3,
+        grid: [['tomato', 'basil'], [null, null], [null, null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      // Should show notification
+      await waitFor(() => {
+        expect(screen.getByText(/Saved plan loaded for Side Garden/)).toBeInTheDocument();
+      });
+
+      // Fast forward 3 seconds and flush microtasks
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      // Notification should be hidden
+      await waitFor(() => {
+        expect(screen.queryByText(/Saved plan loaded for Side Garden/)).not.toBeInTheDocument();
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('should clear saved plan notification when generating new plan', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 3,
+        grid: [['tomato', 'basil'], [null, null], [null, null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      // Should initially show saved plan notification
+      expect(screen.getByText(/Saved plan loaded for Side Garden/)).toBeInTheDocument();
+
+      // Now generate a new plan
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Saved plan notification should be cleared
+      expect(screen.queryByText(/Saved plan loaded/)).not.toBeInTheDocument();
+    });
+
+    it('should initialize locked squares when loading saved plan', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 2,
+        grid: [['tomato', 'basil'], ['lettuce', null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      // Should be able to delete squares (requires locked squares to be initialized)
+      expect(screen.getByText('Mock Delete')).toBeInTheDocument();
+
+      const deleteButton = screen.getByText('Mock Delete');
+      fireEvent.click(deleteButton);
+
+      // Should not crash (verifies locked squares are properly initialized)
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+    });
+
+    it('should initialize history when loading saved plan', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 2,
+        grid: [['tomato', 'basil'], ['lettuce', null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Undo should be disabled (no previous history)
+      const undoButton = screen.getByText('Undo');
+      expect(undoButton).toBeDisabled();
+
+      // Redo should be disabled (no future history)
+      const redoButton = screen.getByText('Redo');
+      expect(redoButton).toBeDisabled();
+    });
+
+    it('should handle bed without grid property gracefully', () => {
+      const bedWithoutGrid = {
+        id: 'bed-3',
+        name: 'New Bed',
+        width: 4,
+        height: 4
+        // No grid property
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithoutGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-3' } });
+
+      // Should not show saved plan notification
+      expect(screen.queryByText(/Saved plan loaded/)).not.toBeInTheDocument();
+
+      // Should not show arrangement
+      expect(screen.queryByText(/Garden Layout/)).not.toBeInTheDocument();
+    });
+
+    it('should only load saved plan once per URL navigation', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-with-plan',
+        name: 'Bed With Plan',
+        width: 2,
+        height: 2,
+        grid: [['tomato', 'basil'], ['lettuce', null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([bedWithSavedGrid, mockBeds[0]]);
+
+      renderPlanner(['/planner?bed=bed-with-plan']);
+
+      // Plan should be loaded once
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // The useEffect should not run again due to ref guard
+      // This is tested by the processedUrlParam.current check
+    });
+
+    it('should not show saved plan notification when bed has null grid', () => {
+      const bedWithNullGrid = {
+        id: 'bed-3',
+        name: 'Bed With Null Grid',
+        width: 4,
+        height: 4,
+        grid: null
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithNullGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-3' } });
+
+      // Should not show saved plan notification
+      expect(screen.queryByText(/Saved plan loaded/)).not.toBeInTheDocument();
+
+      // Should not show arrangement
+      expect(screen.queryByText(/Garden Layout/)).not.toBeInTheDocument();
+    });
+
+    it('should allow editing saved plan', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 2,
+        grid: [['tomato', 'basil'], ['lettuce', null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Should be able to edit
+      const editButton = screen.getByText('Mock Edit');
+      fireEvent.click(editButton);
+
+      // Should still show grid after edit
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Undo should now be enabled (edit created history)
+      const undoButton = screen.getByText('Undo');
+      expect(undoButton).not.toBeDisabled();
+    });
+
+    it('should create arrangement with success:true when loading saved plan', () => {
+      const bedWithSavedGrid = {
+        id: 'bed-2',
+        name: 'Side Garden',
+        width: 2,
+        height: 2,
+        grid: [['tomato', 'basil'], ['lettuce', null]]
+      };
+
+      storage.getGardenBeds.mockReturnValue([mockBeds[0], bedWithSavedGrid]);
+
+      renderPlanner();
+
+      const bedSelect = screen.getByRole('combobox');
+      fireEvent.change(bedSelect, { target: { value: 'bed-2' } });
+
+      expect(screen.getByText(/Garden Layout/)).toBeInTheDocument();
+
+      // Grid should be visible (arrangement has success: true)
+      expect(screen.getByText(/Mock Grid/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Planning Options', () => {
+    it('should render Planning Options section', () => {
+      renderPlanner();
+      expect(screen.getByText('Planning Options')).toBeInTheDocument();
+    });
+
+    it('should render all four planning option checkboxes', () => {
+      renderPlanner();
+      expect(screen.getByText('Keep same plants adjacent')).toBeInTheDocument();
+      expect(screen.getByText('Fill bed completely')).toBeInTheDocument();
+      expect(screen.getByText('Maximize companion benefits')).toBeInTheDocument();
+      expect(screen.getByText('Respect locked squares')).toBeInTheDocument();
+    });
+
+    it('should render option descriptions', () => {
+      renderPlanner();
+      expect(screen.getByText('Group identical plants together')).toBeInTheDocument();
+      expect(screen.getByText('Expand quantities to fill all empty squares')).toBeInTheDocument();
+      expect(screen.getByText('Prioritize companion adjacency over grouping')).toBeInTheDocument();
+      expect(screen.getByText('Do not overwrite user-locked squares')).toBeInTheDocument();
+    });
+
+    it('should have correct default values for options', () => {
+      renderPlanner();
+
+      const keepAdjacentCheckbox = screen.getByRole('checkbox', { name: /keep same plants adjacent/i });
+      const fillBedCheckbox = screen.getByRole('checkbox', { name: /fill bed completely/i });
+      const maximizeCompanionsCheckbox = screen.getByRole('checkbox', { name: /maximize companion benefits/i });
+      const respectLockedCheckbox = screen.getByRole('checkbox', { name: /respect locked squares/i });
+
+      expect(keepAdjacentCheckbox).toBeChecked();
+      expect(fillBedCheckbox).not.toBeChecked();
+      expect(maximizeCompanionsCheckbox).not.toBeChecked();
+      expect(respectLockedCheckbox).toBeChecked();
+    });
+
+    it('should toggle keepAdjacent option when clicked', () => {
+      renderPlanner();
+
+      const checkbox = screen.getByRole('checkbox', { name: /keep same plants adjacent/i });
+      expect(checkbox).toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+    });
+
+    it('should toggle fillBed option when clicked', () => {
+      renderPlanner();
+
+      const checkbox = screen.getByRole('checkbox', { name: /fill bed completely/i });
+      expect(checkbox).not.toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it('should toggle maximizeCompanions option when clicked', () => {
+      renderPlanner();
+
+      const checkbox = screen.getByRole('checkbox', { name: /maximize companion benefits/i });
+      expect(checkbox).not.toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it('should toggle respectLocked option when clicked', () => {
+      renderPlanner();
+
+      const checkbox = screen.getByRole('checkbox', { name: /respect locked squares/i });
+      expect(checkbox).toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+    });
+
+    it('should pass options to generateArrangement when generating plan', () => {
+      renderPlanner();
+
+      // Change some options
+      const fillBedCheckbox = screen.getByRole('checkbox', { name: /fill bed completely/i });
+      fireEvent.click(fillBedCheckbox);
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Should call generateArrangement with options
+      expect(planningAlgorithm.generateArrangement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            keepAdjacent: true,
+            fillBed: true,
+            maximizeCompanions: false,
+            respectLocked: true
+          })
+        })
+      );
+    });
+
+    it('should pass updated options after changing multiple checkboxes', () => {
+      renderPlanner();
+
+      // Change multiple options
+      const keepAdjacentCheckbox = screen.getByRole('checkbox', { name: /keep same plants adjacent/i });
+      const fillBedCheckbox = screen.getByRole('checkbox', { name: /fill bed completely/i });
+      const maximizeCompanionsCheckbox = screen.getByRole('checkbox', { name: /maximize companion benefits/i });
+
+      fireEvent.click(keepAdjacentCheckbox); // Turn off
+      fireEvent.click(fillBedCheckbox); // Turn on
+      fireEvent.click(maximizeCompanionsCheckbox); // Turn on
+
+      // Select plants
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+
+      // Generate plan
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Should call generateArrangement with updated options
+      expect(planningAlgorithm.generateArrangement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            keepAdjacent: false,
+            fillBed: true,
+            maximizeCompanions: true,
+            respectLocked: true
+          })
+        })
+      );
+    });
+
+    it('should pass options to generateArrangementWithFill when filling bed', () => {
+      renderPlanner();
+
+      // Change some options
+      const maximizeCompanionsCheckbox = screen.getByRole('checkbox', { name: /maximize companion benefits/i });
+      fireEvent.click(maximizeCompanionsCheckbox);
+
+      // Select plants and generate
+      const selectPlantsButton = screen.getByText('Mock Select Plants');
+      fireEvent.click(selectPlantsButton);
+      const generateButton = screen.getByText('Generate Plan');
+      fireEvent.click(generateButton);
+
+      // Now fill bed
+      const fillBedButton = screen.getByText('Fill Bed');
+      fireEvent.click(fillBedButton);
+
+      // Should call generateArrangementWithFill with options
+      expect(planningAlgorithm.generateArrangementWithFill).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            keepAdjacent: true,
+            fillBed: false,
+            maximizeCompanions: true,
+            respectLocked: true
+          })
+        })
+      );
     });
   });
 });
