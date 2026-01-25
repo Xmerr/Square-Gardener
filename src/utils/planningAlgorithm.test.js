@@ -3,6 +3,7 @@ import {
   getAdjacentPositions,
   isValidPlacement,
   countCompanionAdjacencies,
+  countSamePlantAdjacencies,
   getConstraintDifficulty,
   sortByConstraintDifficulty,
   findBestPosition,
@@ -97,6 +98,40 @@ describe('planningAlgorithm', () => {
       const grid = [['kale', null], [null, null]];
       // Placing tomato next to kale should fail because kale avoids tomato
       expect(isValidPlacement('tomato', 0, 1, grid)).toBe(false);
+    });
+  });
+
+  describe('countSamePlantAdjacencies', () => {
+    it('should return 0 when no adjacent plants match', () => {
+      const grid = [[null, null], [null, null]];
+      expect(countSamePlantAdjacencies('tomato', 0, 0, grid)).toBe(0);
+    });
+
+    it('should count same plant adjacencies', () => {
+      const grid = [['tomato', null], [null, null]];
+      expect(countSamePlantAdjacencies('tomato', 0, 1, grid)).toBe(1);
+    });
+
+    it('should count multiple same plant adjacencies', () => {
+      const grid = [
+        ['tomato', null, 'tomato'],
+        [null, null, null],
+        ['tomato', null, 'tomato']
+      ];
+      expect(countSamePlantAdjacencies('tomato', 1, 1, grid)).toBe(4);
+    });
+
+    it('should not count different plants', () => {
+      const grid = [['basil', null], [null, null]];
+      expect(countSamePlantAdjacencies('tomato', 0, 1, grid)).toBe(0);
+    });
+
+    it('should handle diagonal adjacencies', () => {
+      const grid = [
+        ['tomato', null],
+        [null, null]
+      ];
+      expect(countSamePlantAdjacencies('tomato', 1, 1, grid)).toBe(1);
     });
   });
 
@@ -247,6 +282,79 @@ describe('planningAlgorithm', () => {
       const locked = [[false, false]];
       const position = findBestPosition('tomato', grid, locked);
       expect(position).toBe(null);
+    });
+
+    it('should prioritize same-plant grouping when keepAdjacent is true', () => {
+      const grid = [
+        ['tomato', null, null],
+        [null, 'basil', null],
+        [null, null, null]
+      ];
+      const locked = [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false]
+      ];
+      const position = findBestPosition('tomato', grid, locked, { keepAdjacent: true });
+      // Should prefer position adjacent to existing tomato (0,1) or (1,0)
+      expect(
+        (position.row === 0 && position.col === 1) ||
+        (position.row === 1 && position.col === 0)
+      ).toBe(true);
+    });
+
+    it('should prioritize companion adjacency when maximizeCompanions is true', () => {
+      const grid = [
+        ['tomato', null, null],
+        [null, 'basil', null],
+        [null, null, null]
+      ];
+      const locked = [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false]
+      ];
+      // Place another tomato - with maximizeCompanions, should prefer next to basil
+      const position = findBestPosition('tomato', grid, locked, { maximizeCompanions: true });
+      // basil is a companion to tomato, should prioritize adjacency to basil
+      expect(
+        (position.row === 0 && position.col === 1) ||
+        (position.row === 1 && position.col === 0) ||
+        (position.row === 1 && position.col === 2) ||
+        (position.row === 2 && position.col === 1)
+      ).toBe(true);
+    });
+
+    it('should balance both when keepAdjacent and maximizeCompanions are true', () => {
+      const grid = [
+        ['tomato', null, null],
+        [null, 'basil', null],
+        [null, null, null]
+      ];
+      const locked = [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false]
+      ];
+      const position = findBestPosition('tomato', grid, locked, { keepAdjacent: true, maximizeCompanions: true });
+      // Should find a valid position
+      expect(position).not.toBe(null);
+    });
+
+    it('should use default scoring when no options provided', () => {
+      const grid = [
+        ['tomato', null, null],
+        [null, 'basil', null],
+        [null, null, null]
+      ];
+      const locked = [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false]
+      ];
+      const position = findBestPosition('tomato', grid, locked);
+      // Should find a valid position with default scoring
+      expect(position).not.toBe(null);
     });
   });
 
@@ -459,6 +567,111 @@ describe('planningAlgorithm', () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it('should delegate to generateArrangementWithFill when fillBed option is true', () => {
+      const result = generateArrangement({
+        width: 4,
+        height: 4,
+        plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+        options: { fillBed: true }
+      });
+
+      expect(result.success).toBe(true);
+      // Should fill more squares than minimum
+      const filledCount = result.grid.flat().filter(p => p).length;
+      expect(filledCount).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should respect locked squares when respectLocked is true', () => {
+      const lockedSquares = [
+        [true, false, false],
+        [false, true, false],
+        [false, false, true]
+      ];
+
+      const result = generateArrangement({
+        width: 3,
+        height: 3,
+        plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+        lockedSquares,
+        options: { respectLocked: true }
+      });
+
+      expect(result.success).toBe(true);
+      // Locked squares should remain null
+      expect(result.grid[0][0]).toBe(null);
+      expect(result.grid[1][1]).toBe(null);
+      expect(result.grid[2][2]).toBe(null);
+    });
+
+    it('should ignore locked squares when respectLocked is false', () => {
+      const lockedSquares = [
+        [true, false],
+        [false, false]
+      ];
+
+      const result = generateArrangement({
+        width: 2,
+        height: 2,
+        plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+        lockedSquares,
+        options: { respectLocked: false }
+      });
+
+      expect(result.success).toBe(true);
+      // Should place plants even in "locked" squares since respectLocked is false
+      const filledCount = result.grid.flat().filter(p => p).length;
+      expect(filledCount).toBe(2);
+    });
+
+    it('should use keepAdjacent option for grouping', () => {
+      const result = generateArrangement({
+        width: 3,
+        height: 3,
+        plantSelections: [{ plantId: 'tomato', quantity: 3 }],
+        options: { keepAdjacent: true }
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.placements).toHaveLength(3);
+    });
+
+    it('should use maximizeCompanions option', () => {
+      const result = generateArrangement({
+        width: 3,
+        height: 3,
+        plantSelections: [
+          { plantId: 'tomato', quantity: 2 },
+          { plantId: 'basil', quantity: 2 }
+        ],
+        options: { maximizeCompanions: true }
+      });
+
+      expect(result.success).toBe(true);
+      const validation = validateArrangement(result.grid);
+      expect(validation.valid).toBe(true);
+    });
+
+    it('should handle all options together', () => {
+      const result = generateArrangement({
+        width: 4,
+        height: 4,
+        plantSelections: [
+          { plantId: 'tomato', quantity: 2 },
+          { plantId: 'basil', quantity: 2 }
+        ],
+        options: {
+          keepAdjacent: true,
+          maximizeCompanions: true,
+          respectLocked: true,
+          fillBed: false
+        }
+      });
+
+      expect(result.success).toBe(true);
+      const validation = validateArrangement(result.grid);
+      expect(validation.valid).toBe(true);
     });
   });
 
@@ -853,6 +1066,80 @@ describe('planningAlgorithm', () => {
         expect(result.success).toBe(true);
         // Should fill the grid (3 squares available)
         expect(result.placements.length).toBe(3);
+      });
+
+      it('should respect locked squares when respectLocked option is true', () => {
+        const lockedSquares = [
+          [true, false, false],
+          [false, true, false],
+          [false, false, true]
+        ];
+
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 3,
+          plantSelections: [{ plantId: 'tomato', quantity: 1 }],
+          lockedSquares,
+          fillMode: true,
+          options: { respectLocked: true }
+        });
+
+        expect(result.success).toBe(true);
+        // Locked squares should remain null
+        expect(result.grid[0][0]).toBe(null);
+        expect(result.grid[1][1]).toBe(null);
+        expect(result.grid[2][2]).toBe(null);
+      });
+
+      it('should ignore locked squares when respectLocked option is false', () => {
+        const lockedSquares = [
+          [true, false],
+          [false, false]
+        ];
+
+        const result = generateArrangementWithFill({
+          width: 2,
+          height: 2,
+          plantSelections: [{ plantId: 'tomato', quantity: 1 }],
+          lockedSquares,
+          fillMode: true,
+          options: { respectLocked: false }
+        });
+
+        expect(result.success).toBe(true);
+        // Should place plants even in "locked" squares
+        const filledCount = result.grid.flat().filter(p => p).length;
+        expect(filledCount).toBeGreaterThan(0);
+      });
+
+      it('should use keepAdjacent option for grouping in fill mode', () => {
+        const result = generateArrangementWithFill({
+          width: 3,
+          height: 3,
+          plantSelections: [{ plantId: 'tomato', quantity: 2 }],
+          fillMode: true,
+          options: { keepAdjacent: true }
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.placements.length).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should use maximizeCompanions option in fill mode', () => {
+        const result = generateArrangementWithFill({
+          width: 4,
+          height: 4,
+          plantSelections: [
+            { plantId: 'tomato', quantity: 1 },
+            { plantId: 'basil', quantity: 1 }
+          ],
+          fillMode: true,
+          options: { maximizeCompanions: true }
+        });
+
+        expect(result.success).toBe(true);
+        const validation = validateArrangement(result.grid);
+        expect(validation.valid).toBe(true);
       });
     });
   });

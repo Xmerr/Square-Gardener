@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { getPlantById } from '../data/plantLibrary';
+import { getPlantById, getCompanionReason, getEnemyReason } from '../data/plantLibrary';
 import { getAdjacentPositions } from '../utils/planningAlgorithm';
 
 function SquareDetails({ square, arrangement, onMove, onSwap, onRemove, onClose }) {
@@ -35,19 +35,21 @@ function SquareDetails({ square, arrangement, onMove, onSwap, onRemove, onClose 
         companions.push({
           plantId: adjacentPlantId,
           name: adjacentPlant.name,
-          position: pos
+          position: pos,
+          reason: getCompanionReason(plantId, adjacentPlantId)
         });
       } else if (plant.avoidPlants.includes(adjacentPlantId)) {
         enemies.push({
           plantId: adjacentPlantId,
           name: adjacentPlant.name,
-          position: pos
+          position: pos,
+          reason: getEnemyReason(plantId, adjacentPlantId)
         });
       }
     }
 
     return { companions, enemies };
-  }, [plant, arrangement, row, col]);
+  }, [plant, plantId, arrangement, row, col]);
 
   // Generate placement reasoning based on relationships
   const reasoning = useMemo(() => {
@@ -133,10 +135,15 @@ function SquareDetails({ square, arrangement, onMove, onSwap, onRemove, onClose 
                         </svg>
                         <span className="font-medium">Companions:</span>
                       </div>
-                      <ul className="ml-6 space-y-1">
+                      <ul className="ml-6 space-y-2">
                         {adjacentRelationships.companions.map((companion, index) => (
-                          <li key={index} className="text-sm text-gray-700">
-                            {companion.name} at ({companion.position.row}, {companion.position.col})
+                          <li key={index} className="text-sm">
+                            <div className="font-medium text-gray-700">
+                              {companion.name} at ({companion.position.row}, {companion.position.col})
+                            </div>
+                            <div className="text-gray-600 italic mt-0.5">
+                              {companion.reason}
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -151,10 +158,15 @@ function SquareDetails({ square, arrangement, onMove, onSwap, onRemove, onClose 
                         </svg>
                         <span className="font-medium">Enemies:</span>
                       </div>
-                      <ul className="ml-6 space-y-1">
+                      <ul className="ml-6 space-y-2">
                         {adjacentRelationships.enemies.map((enemy, index) => (
-                          <li key={index} className="text-sm text-gray-700">
-                            {enemy.name} at ({enemy.position.row}, {enemy.position.col})
+                          <li key={index} className="text-sm">
+                            <div className="font-medium text-gray-700">
+                              {enemy.name} at ({enemy.position.row}, {enemy.position.col})
+                            </div>
+                            <div className="text-red-600 italic mt-0.5">
+                              {enemy.reason}
+                            </div>
                           </li>
                         ))}
                       </ul>

@@ -14,7 +14,19 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'summer'],
     sunRequirement: 'full',
     companionPlants: ['basil', 'carrot', 'marigold', 'parsley'],
-    avoidPlants: ['cabbage', 'broccoli', 'cauliflower', 'potato']
+    avoidPlants: ['cabbage', 'broccoli', 'cauliflower', 'potato'],
+    companionReasons: {
+      basil: 'Basil repels aphids and tomato hornworms while enhancing flavor',
+      carrot: 'Carrots help aerate soil while tomatoes provide shade',
+      marigold: 'Marigolds deter nematodes and whiteflies that attack tomatoes',
+      parsley: 'Parsley attracts beneficial insects that protect tomatoes'
+    },
+    enemyReasons: {
+      cabbage: 'Both are heavy feeders competing for the same nutrients',
+      broccoli: 'Both are heavy feeders competing for the same nutrients',
+      cauliflower: 'Both are heavy feeders competing for the same nutrients',
+      potato: 'Both attract similar pests and diseases, especially blight'
+    }
   },
   {
     id: 'lettuce',
@@ -26,7 +38,16 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'fall'],
     sunRequirement: 'partial',
     companionPlants: ['carrot', 'radish', 'cucumber', 'strawberry'],
-    avoidPlants: ['parsley']
+    avoidPlants: ['parsley'],
+    companionReasons: {
+      carrot: 'Lettuce provides ground cover that helps carrots retain moisture',
+      radish: 'Radishes grow quickly and help break up soil for lettuce roots',
+      cucumber: 'Lettuce acts as living mulch, keeping soil cool for cucumbers',
+      strawberry: 'Lettuce and strawberries have similar moisture needs'
+    },
+    enemyReasons: {
+      parsley: 'Both compete for similar nutrients and growing space'
+    }
   },
   {
     id: 'carrot',
@@ -38,7 +59,17 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'fall'],
     sunRequirement: 'full',
     companionPlants: ['lettuce', 'onion', 'tomato', 'pea'],
-    avoidPlants: ['dill', 'parsnip']
+    avoidPlants: ['dill', 'parsnip'],
+    companionReasons: {
+      lettuce: 'Lettuce provides shade and helps retain soil moisture for carrots',
+      onion: 'Onions repel carrot flies with their strong scent',
+      tomato: 'Tomatoes provide partial shade without competing for root space',
+      pea: 'Peas fix nitrogen in soil which benefits carrot growth'
+    },
+    enemyReasons: {
+      dill: 'Dill attracts carrot flies and can stunt carrot growth',
+      parsnip: 'Both compete for the same deep root space and nutrients'
+    }
   },
   {
     id: 'basil',
@@ -50,7 +81,16 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'summer'],
     sunRequirement: 'full',
     companionPlants: ['tomato', 'pepper', 'oregano'],
-    avoidPlants: ['sage', 'rue']
+    avoidPlants: ['sage', 'rue'],
+    companionReasons: {
+      tomato: 'Basil repels pests and enhances tomato growth and flavor',
+      pepper: 'Basil deters aphids and other pests that attack peppers',
+      oregano: 'Both herbs thrive in similar growing conditions'
+    },
+    enemyReasons: {
+      sage: 'Sage and basil compete for space and have different water needs',
+      rue: 'Rue inhibits basil growth through allelopathy'
+    }
   },
   {
     id: 'pepper',
@@ -86,7 +126,18 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'summer'],
     sunRequirement: 'full',
     companionPlants: ['carrot', 'cucumber', 'radish', 'strawberry'],
-    avoidPlants: ['onion', 'garlic', 'fennel']
+    avoidPlants: ['onion', 'garlic', 'fennel'],
+    companionReasons: {
+      carrot: 'Beans fix nitrogen that carrots need for growth',
+      cucumber: 'Beans and cucumbers have compatible growing habits',
+      radish: 'Radishes help aerate soil for bean roots',
+      strawberry: 'Beans provide nitrogen that strawberries utilize'
+    },
+    enemyReasons: {
+      onion: 'Onions inhibit bean growth through root secretions',
+      garlic: 'Garlic stunts bean development with allelopathic compounds',
+      fennel: 'Fennel secretes compounds toxic to most garden plants'
+    }
   },
   {
     id: 'spinach',
@@ -122,7 +173,18 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'fall'],
     sunRequirement: 'full',
     companionPlants: ['carrot', 'tomato', 'pepper', 'lettuce'],
-    avoidPlants: ['bean', 'pea', 'sage']
+    avoidPlants: ['bean', 'pea', 'sage'],
+    companionReasons: {
+      carrot: 'Onions repel carrot flies while carrots deter onion flies',
+      tomato: 'Onions deter aphids and other pests from tomatoes',
+      pepper: 'Onions help repel pests that commonly attack peppers',
+      lettuce: 'Onions and lettuce have compatible root depths'
+    },
+    enemyReasons: {
+      bean: 'Onions inhibit bean growth through allelopathic compounds',
+      pea: 'Onions stunt pea development with root secretions',
+      sage: 'Both compete for similar nutrients and growing space'
+    }
   },
   {
     id: 'broccoli',
@@ -146,7 +208,16 @@ export const plantLibrary = [
     plantingSeason: ['spring', 'fall'],
     sunRequirement: 'full',
     companionPlants: ['beet', 'celery', 'onion'],
-    avoidPlants: ['tomato', 'strawberry']
+    avoidPlants: ['tomato', 'strawberry'],
+    companionReasons: {
+      beet: 'Beets and cabbage have similar nutrient needs and timing',
+      celery: 'Celery deters cabbage white butterflies',
+      onion: 'Onions repel cabbage worms and aphids'
+    },
+    enemyReasons: {
+      tomato: 'Both are heavy feeders competing for the same nutrients',
+      strawberry: 'Strawberries can inhibit cabbage head formation'
+    }
   },
   {
     id: 'cauliflower',
@@ -504,4 +575,60 @@ export const arePlantsCompanions = (plantId1, plantId2) => {
   const plant2HasAsCompanion = plant2.companionPlants.includes(plantId1);
 
   return plant1HasAsCompanion || plant2HasAsCompanion;
+};
+
+/**
+ * Get the reason for a companion relationship between two plants
+ * @param {string} plantId1 - First plant ID
+ * @param {string} plantId2 - Second plant ID
+ * @returns {string} The reason for companionship, or a fallback message
+ */
+export const getCompanionReason = (plantId1, plantId2) => {
+  const plant1 = getPlantById(plantId1);
+  const plant2 = getPlantById(plantId2);
+
+  if (!plant1 || !plant2) {
+    return 'These plants grow well together';
+  }
+
+  // Check if plant1 has a reason for plant2
+  if (plant1.companionReasons?.[plantId2]) {
+    return plant1.companionReasons[plantId2];
+  }
+
+  // Check if plant2 has a reason for plant1
+  if (plant2.companionReasons?.[plantId1]) {
+    return plant2.companionReasons[plantId1];
+  }
+
+  // Fallback message
+  return 'These plants grow well together';
+};
+
+/**
+ * Get the reason for an enemy relationship between two plants
+ * @param {string} plantId1 - First plant ID
+ * @param {string} plantId2 - Second plant ID
+ * @returns {string} The reason for incompatibility, or a fallback message
+ */
+export const getEnemyReason = (plantId1, plantId2) => {
+  const plant1 = getPlantById(plantId1);
+  const plant2 = getPlantById(plantId2);
+
+  if (!plant1 || !plant2) {
+    return 'These plants should be kept apart';
+  }
+
+  // Check if plant1 has a reason for avoiding plant2
+  if (plant1.enemyReasons?.[plantId2]) {
+    return plant1.enemyReasons[plantId2];
+  }
+
+  // Check if plant2 has a reason for avoiding plant1
+  if (plant2.enemyReasons?.[plantId1]) {
+    return plant2.enemyReasons[plantId1];
+  }
+
+  // Fallback message
+  return 'These plants should be kept apart';
 };

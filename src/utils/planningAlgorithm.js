@@ -118,13 +118,40 @@ export const sortByConstraintDifficulty = (plantSelections) => {
 };
 
 /**
+ * Count same-plant adjacencies for grouping
+ * @param {string} plantId
+ * @param {number} row
+ * @param {number} col
+ * @param {Array<Array<string|null>>} grid
+ * @returns {number}
+ */
+export const countSamePlantAdjacencies = (plantId, row, col, grid) => {
+  const height = grid.length;
+  const width = grid[0].length;
+  const adjacentPositions = getAdjacentPositions(row, col, width, height);
+  let count = 0;
+
+  for (const pos of adjacentPositions) {
+    const adjacentPlantId = grid[pos.row][pos.col];
+    if (adjacentPlantId === plantId) {
+      count++;
+    }
+  }
+  return count;
+};
+
+/**
  * Find the best position for a plant using scoring
  * @param {string} plantId
  * @param {Array<Array<string|null>>} grid
  * @param {Array<Array<boolean>>} lockedSquares
+ * @param {Object} [options] - Planning options
+ * @param {boolean} [options.keepAdjacent] - Prefer grouping same plants
+ * @param {boolean} [options.maximizeCompanions] - Prioritize companion adjacency
  * @returns {{row: number, col: number} | null}
  */
-export const findBestPosition = (plantId, grid, lockedSquares) => {
+export const findBestPosition = (plantId, grid, lockedSquares, options = {}) => {
+  const { keepAdjacent = false, maximizeCompanions = false } = options;
   const height = grid.length;
   const width = grid[0].length;
   let bestPosition = null;
@@ -139,8 +166,22 @@ export const findBestPosition = (plantId, grid, lockedSquares) => {
       // Check if placement is valid (no enemy adjacencies)
       if (!isValidPlacement(plantId, row, col, grid)) continue;
 
-      // Score based on companion adjacencies
-      const score = countCompanionAdjacencies(plantId, row, col, grid);
+      // Calculate score based on options
+      let score = 0;
+
+      if (maximizeCompanions && keepAdjacent) {
+        // Both enabled: prioritize companions more, but still value grouping
+        score = countCompanionAdjacencies(plantId, row, col, grid) * 3 + countSamePlantAdjacencies(plantId, row, col, grid);
+      } else if (maximizeCompanions) {
+        // Only maximize companions
+        score = countCompanionAdjacencies(plantId, row, col, grid) * 2;
+      } else if (keepAdjacent) {
+        // Only keep adjacent: prioritize same-plant grouping
+        score = countSamePlantAdjacencies(plantId, row, col, grid) * 2 + countCompanionAdjacencies(plantId, row, col, grid);
+      } else {
+        // Default: companion adjacencies only
+        score = countCompanionAdjacencies(plantId, row, col, grid);
+      }
 
       if (score > bestScore) {
         bestScore = score;
@@ -154,11 +195,16 @@ export const findBestPosition = (plantId, grid, lockedSquares) => {
 
 /**
  * Generate a garden arrangement using constraint satisfaction
- * @param {Object} options
- * @param {number} options.width - Bed width in feet
- * @param {number} options.height - Bed height in feet
- * @param {Array<{plantId: string, quantity: number}>} options.plantSelections - Plants to arrange
- * @param {Array<Array<boolean>>} [options.lockedSquares] - Optional grid of locked squares
+ * @param {Object} params
+ * @param {number} params.width - Bed width in feet
+ * @param {number} params.height - Bed height in feet
+ * @param {Array<{plantId: string, quantity: number}>} params.plantSelections - Plants to arrange
+ * @param {Array<Array<boolean>>} [params.lockedSquares] - Optional grid of locked squares
+ * @param {Object} [params.options] - Planning options
+ * @param {boolean} [params.options.keepAdjacent] - Group same plants together
+ * @param {boolean} [params.options.fillBed] - Fill all empty squares
+ * @param {boolean} [params.options.maximizeCompanions] - Prioritize companion adjacency
+ * @param {boolean} [params.options.respectLocked] - Respect locked squares
  * @returns {{
  *   grid: Array<Array<string|null>>,
  *   placements: Array<{plantId: string, row: number, col: number}>,
@@ -167,7 +213,21 @@ export const findBestPosition = (plantId, grid, lockedSquares) => {
  * }}
  * @throws {Error} If no valid arrangement is possible
  */
-export const generateArrangement = ({ width, height, plantSelections, lockedSquares }) => {
+export const generateArrangement = ({ width, height, plantSelections, lockedSquares, options = {} }) => {
+  const { fillBed = false, respectLocked = true } = options;
+
+  // If fillBed option is enabled, delegate to generateArrangementWithFill
+  if (fillBed) {
+    return generateArrangementWithFill({
+      width,
+      height,
+      plantSelections,
+      lockedSquares,
+      fillMode: true,
+      options
+    });
+  }
+
   // Validate inputs
   if (!width || !height || width < 1 || height < 1) {
     throw new Error('Invalid bed dimensions');
@@ -179,8 +239,8 @@ export const generateArrangement = ({ width, height, plantSelections, lockedSqua
   // Initialize grid with nulls
   const grid = Array.from({ length: height }, () => Array(width).fill(null));
 
-  // Initialize locked squares if not provided
-  const locked = lockedSquares || Array.from({ length: height }, () => Array(width).fill(false));
+  // Initialize locked squares if not provided or if respectLocked is false
+  const locked = (respectLocked && lockedSquares) ? lockedSquares : Array.from({ length: height }, () => Array(width).fill(false));
 
   // Track placements
   const placements = [];
@@ -202,7 +262,7 @@ export const generateArrangement = ({ width, height, plantSelections, lockedSqua
 
   // Place each plant using greedy algorithm with scoring
   for (const plantId of plantsToPlace) {
-    const position = findBestPosition(plantId, grid, locked);
+    const position = findBestPosition(plantId, grid, locked, options);
 
     if (!position) {
       // No valid position found
@@ -351,12 +411,16 @@ export const findBridgePlants = (plantId1, plantId2, availablePlantIds) => {
 
 /**
  * Generate arrangement with fill mode - uses quantities as minimums and fills remaining space
- * @param {Object} options
- * @param {number} options.width - Bed width in feet
- * @param {number} options.height - Bed height in feet
- * @param {Array<{plantId: string, quantity: number}>} options.plantSelections - Plants to arrange (minimums)
- * @param {Array<Array<boolean>>} [options.lockedSquares] - Optional grid of locked squares
- * @param {boolean} [options.fillMode=false] - If true, fill all available space
+ * @param {Object} params
+ * @param {number} params.width - Bed width in feet
+ * @param {number} params.height - Bed height in feet
+ * @param {Array<{plantId: string, quantity: number}>} params.plantSelections - Plants to arrange (minimums)
+ * @param {Array<Array<boolean>>} [params.lockedSquares] - Optional grid of locked squares
+ * @param {boolean} [params.fillMode=false] - If true, fill all available space
+ * @param {Object} [params.options] - Planning options
+ * @param {boolean} [params.options.keepAdjacent] - Group same plants together
+ * @param {boolean} [params.options.maximizeCompanions] - Prioritize companion adjacency
+ * @param {boolean} [params.options.respectLocked] - Respect locked squares
  * @returns {{
  *   grid: Array<Array<string|null>>,
  *   placements: Array<{plantId: string, row: number, col: number}>,
@@ -364,7 +428,9 @@ export const findBridgePlants = (plantId1, plantId2, availablePlantIds) => {
  *   unplacedPlants: Array<string>
  * }}
  */
-export const generateArrangementWithFill = ({ width, height, plantSelections, lockedSquares, fillMode = false }) => {
+export const generateArrangementWithFill = ({ width, height, plantSelections, lockedSquares, fillMode = false, options = {} }) => {
+  const { respectLocked = true } = options;
+
   // Validate inputs
   if (!width || !height || width < 1 || height < 1) {
     throw new Error('Invalid bed dimensions');
@@ -376,8 +442,8 @@ export const generateArrangementWithFill = ({ width, height, plantSelections, lo
   // Initialize grid with nulls
   const grid = Array.from({ length: height }, () => Array(width).fill(null));
 
-  // Initialize locked squares if not provided
-  const locked = lockedSquares || Array.from({ length: height }, () => Array(width).fill(false));
+  // Initialize locked squares if not provided or if respectLocked is false
+  const locked = (respectLocked && lockedSquares) ? lockedSquares : Array.from({ length: height }, () => Array(width).fill(false));
 
   // Track placements
   const placements = [];
@@ -400,7 +466,7 @@ export const generateArrangementWithFill = ({ width, height, plantSelections, lo
 
     // Place each plant using greedy algorithm with scoring
     for (const plantId of plantsToPlace) {
-      const position = findBestPosition(plantId, grid, locked);
+      const position = findBestPosition(plantId, grid, locked, options);
 
       if (!position) {
         unplacedPlants.push(plantId);
@@ -439,7 +505,7 @@ export const generateArrangementWithFill = ({ width, height, plantSelections, lo
   }
 
   for (const plantId of plantsToPlace) {
-    const position = findBestPosition(plantId, grid, locked);
+    const position = findBestPosition(plantId, grid, locked, options);
 
     if (!position) {
       unplacedPlants.push(plantId);
@@ -485,7 +551,7 @@ export const generateArrangementWithFill = ({ width, height, plantSelections, lo
 
         if (ratio < lowestRatio) {
           // Try to find a valid position for this plant
-          const testPosition = findBestPosition(plantId, grid, locked);
+          const testPosition = findBestPosition(plantId, grid, locked, options);
           if (testPosition) {
             lowestRatio = ratio;
             selectedPlantId = plantId;
@@ -494,7 +560,7 @@ export const generateArrangementWithFill = ({ width, height, plantSelections, lo
       }
 
       if (selectedPlantId) {
-        const position = findBestPosition(selectedPlantId, grid, locked);
+        const position = findBestPosition(selectedPlantId, grid, locked, options);
         if (position) {
           grid[position.row][position.col] = selectedPlantId;
           placements.push({ plantId: selectedPlantId, row: position.row, col: position.col });

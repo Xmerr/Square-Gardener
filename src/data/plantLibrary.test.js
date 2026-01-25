@@ -5,7 +5,9 @@ import {
   getPlantsBySeason,
   getCompanionPlants,
   arePlantsCompatible,
-  arePlantsCompanions
+  arePlantsCompanions,
+  getCompanionReason,
+  getEnemyReason
 } from './plantLibrary';
 
 describe('plantLibrary', () => {
@@ -275,6 +277,104 @@ describe('plantLibrary', () => {
         expect(arePlantsCompatible('calathea', 'basil')).toBe(true);
         expect(arePlantsCompatible('tomato', 'calathea')).toBe(true);
       });
+    });
+  });
+
+  describe('getCompanionReason', () => {
+    it('returns specific reason when defined in plant1', () => {
+      const reason = getCompanionReason('tomato', 'basil');
+      expect(reason).toContain('repels');
+    });
+
+    it('returns specific reason when defined in plant2', () => {
+      const reason = getCompanionReason('basil', 'tomato');
+      expect(reason).toContain('repels');
+    });
+
+    it('returns fallback message when reason not defined', () => {
+      // Oregano and pepper are not listed as companions, so they have no reason
+      // Use strawberry and lettuce - both list each other as companions but have no reasons defined
+      const reason = getCompanionReason('strawberry', 'spinach');
+      expect(reason).toBe('These plants grow well together');
+    });
+
+    it('returns fallback for non-existent plant1', () => {
+      const reason = getCompanionReason('non-existent', 'tomato');
+      expect(reason).toBe('These plants grow well together');
+    });
+
+    it('returns fallback for non-existent plant2', () => {
+      const reason = getCompanionReason('tomato', 'non-existent');
+      expect(reason).toBe('These plants grow well together');
+    });
+
+    it('returns symmetric reasons correctly', () => {
+      // Carrot lists lettuce with a reason
+      const reason1 = getCompanionReason('carrot', 'lettuce');
+      expect(reason1).toBeTruthy();
+
+      // The reason should be found regardless of order
+      const reason2 = getCompanionReason('lettuce', 'carrot');
+      expect(reason2).toBeTruthy();
+    });
+
+    it('handles plants without companionReasons property', () => {
+      // Aloe has no companion reasons
+      const reason = getCompanionReason('aloe', 'tomato');
+      expect(reason).toBe('These plants grow well together');
+    });
+  });
+
+  describe('getEnemyReason', () => {
+    it('returns specific reason when defined in plant1', () => {
+      const reason = getEnemyReason('tomato', 'cabbage');
+      expect(reason).toContain('nutrient');
+    });
+
+    it('returns specific reason when defined in plant2', () => {
+      const reason = getEnemyReason('cabbage', 'tomato');
+      expect(reason).toContain('nutrient');
+    });
+
+    it('returns fallback message when reason not defined', () => {
+      // Radish avoids hyssop but has no reason defined
+      const reason = getEnemyReason('radish', 'hyssop');
+      expect(reason).toBe('These plants should be kept apart');
+    });
+
+    it('returns fallback for non-existent plant1', () => {
+      const reason = getEnemyReason('non-existent', 'tomato');
+      expect(reason).toBe('These plants should be kept apart');
+    });
+
+    it('returns fallback for non-existent plant2', () => {
+      const reason = getEnemyReason('tomato', 'non-existent');
+      expect(reason).toBe('These plants should be kept apart');
+    });
+
+    it('returns symmetric reasons correctly', () => {
+      // Bean avoids onion with a reason
+      const reason1 = getEnemyReason('bean', 'onion');
+      expect(reason1).toBeTruthy();
+
+      // The reason should be found regardless of order
+      const reason2 = getEnemyReason('onion', 'bean');
+      expect(reason2).toBeTruthy();
+    });
+
+    it('handles plants without enemyReasons property', () => {
+      // Aloe has no enemy reasons
+      const reason = getEnemyReason('aloe', 'tomato');
+      expect(reason).toBe('These plants should be kept apart');
+    });
+
+    it('returns different reasons for different relationships', () => {
+      const reason1 = getEnemyReason('tomato', 'potato');
+      const reason2 = getEnemyReason('tomato', 'cabbage');
+      // Both should have reasons but they should be different
+      expect(reason1).toBeTruthy();
+      expect(reason2).toBeTruthy();
+      expect(reason1).not.toBe(reason2);
     });
   });
 });

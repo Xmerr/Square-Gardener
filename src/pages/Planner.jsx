@@ -33,9 +33,34 @@ function Planner() {
   const [fillMode, setFillMode] = useState(false);
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [plantsCreatedCount, setPlantsCreatedCount] = useState(0);
+  const [planningOptions, setPlanningOptions] = useState({
+    keepAdjacent: true,
+    fillBed: false,
+    maximizeCompanions: false,
+    respectLocked: true
+  });
+  const [savedPlanLoaded, setSavedPlanLoaded] = useState(false);
   const processedUrlParam = useRef(false);
+  const loadedSavedPlan = useRef(false);
 
-  // Handle URL parameter changes (only runs once on mount if URL param present)
+  // Load saved plan for a bed
+  const loadSavedPlan = (bed) => {
+    if (!bed || !bed.grid) return;
+
+    const savedArrangement = {
+      grid: bed.grid,
+      success: true
+    };
+
+    setArrangement(savedArrangement);
+    setHistory([savedArrangement]);
+    setHistoryIndex(0);
+    setLockedSquares(Array.from({ length: bed.height }, () => Array(bed.width).fill(false)));
+    setSavedPlanLoaded(true);
+    setTimeout(() => setSavedPlanLoaded(false), 3000);
+  };
+
+  // Handle URL parameter changes and load saved plan (only runs once on mount if URL param present)
   useEffect(() => {
     if (processedUrlParam.current) return;
 
@@ -43,9 +68,14 @@ function Planner() {
     if (bedParam && beds.length > 0) {
       const bed = beds.find(b => b.id === bedParam);
       if (bed) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedBed(bed);
         processedUrlParam.current = true;
+
+        // Load saved plan if it exists
+        if (bed.grid && !loadedSavedPlan.current) {
+          loadSavedPlan(bed);
+          loadedSavedPlan.current = true;
+        }
       }
     }
   }, [searchParams, beds]);
@@ -67,13 +97,15 @@ function Planner() {
   const handleGeneratePlan = () => {
     setError(null);
     setFillMode(false);
+    setSavedPlanLoaded(false);
 
     try {
       const result = generateArrangement({
         width: selectedBed.width,
         height: selectedBed.height,
         plantSelections: selectedPlants,
-        lockedSquares: null
+        lockedSquares: null,
+        options: planningOptions
       });
 
       setArrangement(result);
@@ -131,7 +163,8 @@ function Planner() {
         height: selectedBed.height,
         plantSelections: selectedPlants,
         lockedSquares: lockedSquares,
-        fillMode: true
+        fillMode: true,
+        options: planningOptions
       });
 
       setArrangement(result);
@@ -174,12 +207,18 @@ function Planner() {
   const handleBedChange = (bedId) => {
     const bed = beds.find(b => b.id === bedId);
     setSelectedBed(bed);
-    setArrangement(null);
     setSchedule([]);
     setError(null);
-    setLockedSquares(null);
     setFillMode(false);
     setAppliedSuccess(false);
+
+    // Load saved plan if it exists, otherwise clear arrangement
+    if (bed && bed.grid) {
+      loadSavedPlan(bed);
+    } else {
+      setArrangement(null);
+      setLockedSquares(null);
+    }
   };
 
   const handleApplyPlan = () => {
@@ -268,6 +307,64 @@ function Planner() {
                   </div>
                 )}
 
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Planning Options</h2>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={planningOptions.keepAdjacent}
+                        onChange={(e) => setPlanningOptions({ ...planningOptions, keepAdjacent: e.target.checked })}
+                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+                        aria-label="Keep same plants adjacent"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-800">Keep same plants adjacent</div>
+                        <div className="text-sm text-gray-600">Group identical plants together</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={planningOptions.fillBed}
+                        onChange={(e) => setPlanningOptions({ ...planningOptions, fillBed: e.target.checked })}
+                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+                        aria-label="Fill bed completely"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-800">Fill bed completely</div>
+                        <div className="text-sm text-gray-600">Expand quantities to fill all empty squares</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={planningOptions.maximizeCompanions}
+                        onChange={(e) => setPlanningOptions({ ...planningOptions, maximizeCompanions: e.target.checked })}
+                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+                        aria-label="Maximize companion benefits"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-800">Maximize companion benefits</div>
+                        <div className="text-sm text-gray-600">Prioritize companion adjacency over grouping</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={planningOptions.respectLocked}
+                        onChange={(e) => setPlanningOptions({ ...planningOptions, respectLocked: e.target.checked })}
+                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+                        aria-label="Respect locked squares"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-800">Respect locked squares</div>
+                        <div className="text-sm text-gray-600">Do not overwrite user-locked squares</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="flex justify-center">
                   <button
                     onClick={handleGeneratePlan}
@@ -349,6 +446,19 @@ function Planner() {
                           </svg>
                           <p className="text-sm text-green-700 font-medium">
                             Plan applied! Created {plantsCreatedCount} plant{plantsCreatedCount !== 1 ? 's' : ''} in {selectedBed.name}. View them in My Garden.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {savedPlanLoaded && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-sm text-blue-700 font-medium">
+                            Saved plan loaded for {selectedBed.name}. You can edit it or generate a new plan.
                           </p>
                         </div>
                       </div>

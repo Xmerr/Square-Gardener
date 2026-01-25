@@ -111,6 +111,15 @@ describe('SquareDetails', () => {
       expect(screen.getByText(/Adjacent to Tomato \(companion\)/)).toBeInTheDocument();
     });
 
+    it('should display companion reason', () => {
+      // Basil at (0,1) is adjacent to Tomato at (0,0) - they are companions
+      render(<SquareDetails {...defaultProps} />);
+
+      expect(screen.getByText('Companions:')).toBeInTheDocument();
+      // Should show the reason from plant library
+      expect(screen.getByText(/repels/i)).toBeInTheDocument();
+    });
+
     it('should display multiple companions', () => {
       // Create a grid where a plant has multiple companions
       // Carrot at (1,1) is adjacent to Lettuce (1,2) and Tomato (0,0) - both are companions
@@ -179,6 +188,16 @@ describe('SquareDetails', () => {
       expect(screen.getByText(/Warning: Near Cabbage \(should avoid\)/)).toBeInTheDocument();
     });
 
+    it('should display enemy reason', () => {
+      // Tomato at (0,0) is adjacent to Cabbage at (1,0) - they are enemies
+      const tomatoSquare = { row: 0, col: 0, plantId: 'tomato' };
+      render(<SquareDetails {...defaultProps} square={tomatoSquare} />);
+
+      expect(screen.getByText('Enemies:')).toBeInTheDocument();
+      // Should show the reason from plant library
+      expect(screen.getByText(/nutrient/i)).toBeInTheDocument();
+    });
+
     it('should display multiple enemies', () => {
       // Bean at (2,1) is adjacent to Onion at (2,0) which is an enemy
       const beanSquare = { row: 2, col: 1, plantId: 'bean' };
@@ -186,6 +205,28 @@ describe('SquareDetails', () => {
 
       expect(screen.getByText('Enemies:')).toBeInTheDocument();
       expect(screen.getByText(/Onion at \(2, 0\)/)).toBeInTheDocument();
+    });
+
+    it('should display fallback reason when no specific reason defined', () => {
+      // Create a scenario with plants that have no reason defined
+      // Spinach avoids potato but has no enemyReasons defined
+      const gridWithNoReason = {
+        grid: [
+          ['spinach', 'potato'],
+          [null, null]
+        ],
+        placements: [
+          { plantId: 'spinach', row: 0, col: 0 },
+          { plantId: 'potato', row: 0, col: 1 }
+        ],
+        success: true
+      };
+      const spinachSquare = { row: 0, col: 0, plantId: 'spinach' };
+
+      render(<SquareDetails {...defaultProps} arrangement={gridWithNoReason} square={spinachSquare} />);
+
+      // Should show fallback message
+      expect(screen.getByText('These plants should be kept apart')).toBeInTheDocument();
     });
   });
 
